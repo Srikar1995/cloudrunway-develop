@@ -11,7 +11,7 @@
             <layout:content>
                <VBox class="sapUiSmallMarginEnd" height="50px">
                   <Label text="{i18n>terminationStatus}" required="true"/>
-                  <Select id="selBusinessScenarioEdit" visible="{= ${terminationModel>/activeTerminationEditMode}}" selectedKey="{terminationModel>/activeTermination/status}" forceSelection="false" items="{terminationModel>/TerminationStatusList}" width="100%">
+                  <Select id="selBusinessScenarioEdit" visible="{= ${terminationModel>/activeTerminationEditMode}}" selectedKey="{terminationModel>/activeTermination/status}" forceSelection="false" items="{path: 'terminationModel>/TerminationStatusList', filters: [{path: 'key', operator: 'NE', value1:'Completed'}]}" width="100%">
                      <core:Item id="itemBusinessScenarioEdit" key="{terminationModel>key}" text="{terminationModel>text}" />
                   </Select>
                   <ObjectStatus visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{parts: [{path: 'terminationModel>/TerminationStatusList'}, {path: 'terminationModel>/activeTermination/status'}], formatter:'.formatter.getValueDescr'}" />
@@ -25,7 +25,7 @@
                         color="#0070f2"
                         tooltip="More info" />
                   </HBox>
-                  <Text text="{parts: [{path: 'terminationModel>/ScenarioTypeList'}, {path: 'terminationModel>/activeTermination/businessScenario'}], formatter:'.formatter.getValueDescr'}" />
+                  <Text text="{parts: [{path: 'terminationModel>/BusinessScenarioList'}, {path: 'terminationModel>/activeTermination/businessScenario'}], formatter:'.formatter.getValueDescr'}" />
                </VBox>
                <VBox class="sapUiSmallMarginEnd" height="50px">
                   <Label text="{i18n>triggerReason}" />

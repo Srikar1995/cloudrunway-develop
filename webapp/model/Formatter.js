@@ -14,7 +14,7 @@ sap.ui.define([
 		// 	return false;
 		// },
 		getValueDescr: function (aValues, sKey) {
-			const selectedValue = aValues.find((oValue)=>oValue.key === sKey);
+			const selectedValue = aValues?.find((oValue)=>oValue.key === sKey);
 			if (selectedValue && selectedValue.text) {
 				return selectedValue.text;
 			}
@@ -26,10 +26,10 @@ sap.ui.define([
 			}
 			return "Information";
 		},
-		getCreateVisible: function (taList) {
-			if (taList?.length) {
-				const hasInprocess = taList.find((item)=>item.status === "InProcess");
-				return hasInprocess ? false : true;
+		getCreateVisible: function (taList, bValisOpp) {
+			return true;
+			if (!bValisOpp || (taList?.some(item => item.status === "InProcess"))) {
+				return false;
 			}
 			return true;
 		},

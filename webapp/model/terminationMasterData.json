@@ -1,59 +1,188 @@
 {
-    "ScenarioTypeList": [
-      {
-        "key": "CustomerPartnerInitiatedFullTermination",
-        "text": "Customer Partner Initiated Full Termination"
-      },
-      {
-        "key": "EUDataAct",
-        "text": "EU Data Act"
-      },
-      {
-        "key": "SAPInitiatedFullTermination",
-        "text": "SAP Initiated Full Termination"
-      }
-    ],
-    "TerminationOriginList": [
-      {
-        "key": "CustomerInitiated",
-        "text": "Customer Initiated"
-      },
-      {
-        "key": "SapInitiatedNonPayment",
-        "text": "SAP Initiated - Non Payment"
-      },
-      {
-        "key": "SapInitiatedOthers",
-        "text": "SAP Initiated - Others"
-      },
-      {
-        "key": "AutoExpiration",
-        "text": "Auto Expiration"
-      }
-    ],
-    "TerminationStatusList": [
-      {
-        "key": "InProcess",
-        "text": "In Process"
-      },
-      {
-        "key": "Retracted",
-        "text": "Retracted"
-      },
-      {
-        "key": "Completed",
-        "text": "Completed"
-      }
-    ],
-    "TerminationRetractionReasons": [
-      {
-        "key": "TerminationCreatedInError",
-        "text": "Termination created in error"
-      },
-      {
-        "key": "CustomerWillRenew",
-        "text": "Customer will renew"
-      }
-    ]
-  }
-  
+  "TerminationOriginList": [
+    {
+      "key": "CustomerInitiated",
+      "text": "Customer Initiated"
+    },
+    {
+      "key": "SapInitiatedNonPayment",
+      "text": "SAP Initiated - Non Payment"
+    },
+    {
+      "key": "SapInitiatedOthers",
+      "text": "SAP Initiated - Others"
+    },
+    {
+      "key": "AutoExpiration",
+      "text": "Auto Expiration"
+    }
+  ],
+  "TerminationStatusList": [
+    {
+      "key": "InProcess",
+      "text": "In Process"
+    },
+    {
+      "key": "Retracted",
+      "text": "Retracted"
+    },
+    {
+      "key": "Completed",
+      "text": "Completed"
+    }
+  ],
+  "TerminationRetractionReasons": [
+    {
+      "key": "TerminationCreatedInError",
+      "text": "Termination created in error"
+    },
+    {
+      "key": "CustomerWillRenew",
+      "text": "Customer will renew"
+    }
+  ],
+  "BusinessScenarioList": [
+    {
+      "key": "Z01",
+      "text": "Customer/Partner Initiated Full Termination"
+    },
+    {
+      "key": "Z02",
+      "text": "Partial Termination"
+    },
+    {
+      "key": "Z03",
+      "text": "SAP Initiated Full Termination"
+    },
+    {
+      "key": "Z04",
+      "text": "Cloud Concession"
+    },
+    {
+      "key": "Z05",
+      "text": "One-Time Credit"
+    },
+    {
+      "key": "Z06",
+      "text": "Multi-Year Credit"
+    },
+    {
+      "key": "Z07",
+      "text": "EU Data Act"
+    },
+    {
+      "key": "Z08",
+      "text": "Termination for Convenience (T4C)"
+    },
+    {
+      "key": "Z09",
+      "text": "Partner Initiated Risk (only to be used by Partners!)"
+    },
+    {
+      "key": "Z10",
+      "text": "Swap Right Execution"
+    },
+    {
+      "key": "Z11",
+      "text": "Flexible Cloud Addendum (FCA) Execution"
+    },
+    {
+      "key": "Z12",
+      "text": "Move to Partner Managed Cloud (PMC)"
+    },
+    {
+      "key": "Z13",
+      "text": "On-Prem to Cloud Extension (OP2C)"
+    },
+    {
+      "key": "Z14",
+      "text": "Cloud to Cloud Extension (C2C)"
+    },
+    {
+      "key": "Z15",
+      "text": "HEC Extension"
+    },
+    {
+      "key": "Z16",
+      "text": "Move to RISE"
+    }
+  ],
+  "RenewalRiskReasonList": [
+    {
+      "key": "Z01",
+      "text": "Lack of Product Capabilities/Features"
+    },
+    {
+      "key": "Z02",
+      "text": "Lack of Ease-of-Use Capabilities"
+    },
+    {
+      "key": "Z03",
+      "text": "Lack of Technical Capabilities (Integration)"
+    },
+    {
+      "key": "Z04",
+      "text": "Lack of System Availability, Security, Performance"
+    },
+    {
+      "key": "Z05",
+      "text": "Poor Product Support"
+    },
+    {
+      "key": "Z06",
+      "text": "Insufficient Service Request Completion"
+    },
+    {
+      "key": "Z07",
+      "text": "Implementation Issues (Quality - SAP)"
+    },
+    {
+      "key": "Z08",
+      "text": "Implementation Issues (Quality - Partner)"
+    },
+    {
+      "key": "Z09",
+      "text": "Success Plan Value Questioned"
+    },
+    {
+      "key": "Z10",
+      "text": "Low Feature Adoption"
+    },
+    {
+      "key": "Z11",
+      "text": "Oversold / Financial Deal"
+    },
+    {
+      "key": "Z12",
+      "text": "Strategic Churn / Commercial Program"
+    },
+    {
+      "key": "Z13",
+      "text": "Customer Needs Changed"
+    },
+    {
+      "key": "Z14",
+      "text": "Pricing Challenges / Cost Savings"
+    },
+    {
+      "key": "Z15",
+      "text": "Loss of Customer Sponsor"
+    },
+    {
+      "key": "Z16",
+      "text": "100% Renewal - No Churn"
+    },
+    {
+      "key": "Z17",
+      "text": "Default - Not Yet Maintained"
+    },
+    {
+      "key": "Z18",
+      "text": "Move to RISE"
+    },
+    {
+      "key": "Z19",
+      "text": "SAP Pricing Challenges"
+    }
+  ]
+}

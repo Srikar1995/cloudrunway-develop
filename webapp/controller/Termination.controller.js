@@ -7,7 +7,7 @@ sap.ui.define(
     "sap/ui/core/Fragment",
     "cloudrunway/model/Formatter",
     "cloudrunway/controller/CreateDialog",
-    "cloudrunway/model/Common"
+    "cloudrunway/model/Common",
   ],
   function (
     Controller,
@@ -17,7 +17,7 @@ sap.ui.define(
     Fragment,
     formatter,
     CreateDialog,
-    Common
+    Common,
   ) {
     "use strict";
     /**
@@ -32,16 +32,6 @@ sap.ui.define(
     return Controller.extend("cloudrunway.controller.Termination", {
       formatter: formatter,
       CreateDialog: CreateDialog,
-
-      // Constants
-      tempIdPrefix: "temp_",
-      defaultMimeType: "application/octet-stream",
-      pdfFileExtension: ".pdf",
-      defaultFileName: "attachment",
-      defaultCreatedBy: "Current User",
-      httpStatusSuccess: 204,
-      httpStatusOk: 200,
-
       onInit: function () {
         this._initialisation();
         this._readUrlParameters();
@@ -49,8 +39,40 @@ sap.ui.define(
       },
 
       onAfterRendering: function () {
-        this._readOppData();
-        this._readTerminations();
+        this._preValidate();
+      },
+
+      _preValidate: function () {
+        const oView = this.getView();
+        const oODataModel = oView.getModel("terminationModelV4");
+        const oTerminationModel = oView.getModel("terminationModel");
+        const sOpportunityId = oTerminationModel.getProperty("/OpportunityID");
+
+        const oActionBinding = oODataModel.bindContext(
+          "/preValidateTerminationRequest(...)",
+        );
+
+        oActionBinding.setParameter("opportunityId", sOpportunityId);
+
+        oActionBinding
+          .execute()
+          .then(() => {
+            const oResult = oActionBinding.getBoundContext().getObject();
+            const oActiveTAValidation = oResult.validationResults.find((obj) => obj.checkName === "ActiveTerminationCheck");
+            oTerminationModel.setProperty("/preValidationData", oResult);
+            this._readOppData();
+            if (!oActiveTAValidation.passed) {
+              this._readTerminations();
+            }
+          })
+          .catch((oError) => {
+            oTerminationModel.setProperty("/taMessages", [
+              {
+                message: oError.message,
+                type: "Error",
+              },
+            ])
+          });
       },
 
       _initialisation: function () {
@@ -66,33 +88,27 @@ sap.ui.define(
           TerminationReceiptDate: null,
           TerminationEffectiveDate: null,
           Attachments: [],
-          ScenarioTypeList: [],
           TerminationOriginList: [],
           TerminationStatusList: [],
           TerminationRetractionReasons: [],
+          BusinessScenarioList: [],
+          RenewalRiskReasonList: [],
           TerminationsList: [],
           activeTermination: {},
           activeTerminationEditMode: false,
           taMessages: [],
           taUpdateMessages: [],
           createOpen: false,
-          pendingAttachments: [],
-          deletedAttachmentIds: [],
-          originalAttachmentsList: [],
-          mergedAttachmentsList: [],
+          validOpp: false,
+          subscriptionContractId: "",
+          oppRenewalRiskReason: "",
+          oppBusinessScenario: ""
         });
         oView.setModel(oTerminationModel, "terminationModel");
-        
-        // const oMessageManager = sap.ui.getCore().getMessageManager();
-        // const oODataModelV4 = oView.getModel("terminationModelV4");
-        // if (oODataModelV4) {
-        //   oMessageManager.registerObject(oODataModelV4, true);
-        // }
-        // oMessageManager.getMessageModel().attachMessageChange(Common._onMessageChange, this);
+        oView.setModel(new JSONModel({}), "documents");
       },
 
       _readUrlParameters: function () {
-        //TODO I311690
         const oTerminationModel = this.getView().getModel("terminationModel");
         const urlParams = new URLSearchParams(window.location.search);
 
@@ -105,10 +121,7 @@ sap.ui.define(
       _loadDropdownValuesFromJson: function () {
         const oView = this.getView();
         const oTerminationModel = oView.getModel("terminationModel"); // main model
-        const oLocalModel = new JSONModel();
-        oLocalModel.loadData("model/terminationMasterData.json");
-
-        // Use arrow function to preserve context
+        const oLocalModel = new JSONModel("model/terminationMasterData.json");
         oLocalModel.attachRequestCompleted(() => {
           const oData = oLocalModel.getData();
 
@@ -116,47 +129,58 @@ sap.ui.define(
             console.error("terminationModel is not available!");
             return;
           }
-          oTerminationModel.setProperty(
-            "/ScenarioTypeList",
-            oData.ScenarioTypeList || []
-          );
-          oTerminationModel.setProperty(
-            "/TerminationRetractionReasons",
-            oData.TerminationRetractionReasons || []
-          );
-          oTerminationModel.setProperty(
-            "/TerminationOriginList",
-            oData.TerminationOriginList || []
-          );
-          oTerminationModel.setProperty(
-            "/TerminationStatusList",
-            oData.TerminationStatusList || []
-          );
+
+          const properties = [
+            "TerminationRetractionReasons",
+            "TerminationOriginList",
+            "TerminationStatusList",
+            "BusinessScenarioList",
+            "RenewalRiskReasonList",
+          ];
+
+          properties.forEach(prop => {
+            oTerminationModel.setProperty(`/${prop}`, oData[prop] || []);
+          });
         });
 
         oLocalModel.attachRequestFailed(() => {
           MessageToast.show("Failed to load terminationMasterData.json");
         });
       },
-
       _readOppData: function () {
         const oTerminationModel = this.getView().getModel("terminationModel");
         const sOppId = oTerminationModel.getProperty("/OpportunityID");
-        const sExtension = sap.ui.require.toUrl("cloudrunway") + `/sapsalesservicecloudv2/opportunity-service/opportunities?$top=10&$filter=displayId eq '${sOppId}'`;
+        const sExtension =
+          sap.ui.require.toUrl("cloudrunway") +
+          `/sapsalesservicecloudv2/opportunity-service/opportunities?$top=10&$filter=displayId eq '${sOppId}'`;
         $.ajax({
           url: sExtension,
           method: "GET",
           contentType: "application/json",
           success: function (oResult) {
             if (oResult?.value?.length) {
-
+              const oData = oResult?.value[0];
+              oTerminationModel.setProperty("/subscriptionContractId", oData.extensions?.Z_ContractDocId);
+              oTerminationModel.setProperty("/oppRenewalRiskReason", oData.extensions?.Z_RenewalRiskReason);
+              oTerminationModel.setProperty("/oppBusinessScenario", oData.extensions?.Z_BusinessScenario);
+              oTerminationModel.setProperty("/oppAccountID", oData.account?.id);
             } else {
-              oTerminationModel.setProperty("/taMessages", [{ message: Common.getLocalTextByi18nValue("OPPNOTFOUND"), type: "Error" }]);
+              oTerminationModel.setProperty("/taMessages", [
+                {
+                  message: Common.getLocalTextByi18nValue("OPPNOTFOUND"),
+                  type: "Error",
+                },
+              ]);
             }
           },
           error: function () {
-            oTerminationModel.setProperty("/taMessages", [{ message: Common.getLocalTextByi18nValue("OPPERROR"), type: "Error" }]);
-          }
+            oTerminationModel.setProperty("/taMessages", [
+              {
+                message: Common.getLocalTextByi18nValue("OPPERROR"),
+                type: "Error",
+              },
+            ]);
+          },
         });
       },
       _readTerminations: function () {
@@ -192,8 +216,13 @@ sap.ui.define(
                 const sortedResults = aResults.sort((a, b) => {
                   return new Date(b.modifiedAt) - new Date(a.modifiedAt);
                 });
-                oTerminationModel.setProperty("/TerminationsList", sortedResults);
-                oTerminationModel.setProperty("/activeTermination", {...aResults[0]});
+                oTerminationModel.setProperty(
+                  "/TerminationsList",
+                  sortedResults,
+                );
+                oTerminationModel.setProperty("/activeTermination", {
+                  ...aResults[0],
+                });
                 that._readAttachments(aResults[0]);
               }
               oTerminationModel.setProperty(
@@ -212,168 +241,115 @@ sap.ui.define(
           .getSource()
           .getBindingContext("terminationModel")
           .getObject();
-        oTerminationModel.setProperty("/activeTermination", {...selectedItem});
-        // Clear any pending state when selecting a different termination
-        oTerminationModel.setProperty("/pendingAttachments", []);
-        oTerminationModel.setProperty("/deletedAttachmentIds", []);
+        oTerminationModel.setProperty("/activeTermination", {
+          ...selectedItem,
+        });
         this._readAttachments(selectedItem);
         oTerminationModel.setProperty("/activeTerminationEditMode", false);
       },
       onTerminationEdit: function (oEvent) {
         const oTerminationModel = this.getView().getModel("terminationModel");
-        
-        // Create snapshot of current attachments list
-        const aCurrentAttachments = oTerminationModel.getProperty("/AttachmentsList") || [];
-        oTerminationModel.setProperty("/originalAttachmentsList", JSON.parse(JSON.stringify(aCurrentAttachments)));
-        
-        // Initialize pending state
-        oTerminationModel.setProperty("/pendingAttachments", []);
-        oTerminationModel.setProperty("/deletedAttachmentIds", []);
-        
-        // Update merged list
-        this._getMergedAttachmentsList();
-        
         oTerminationModel.setProperty("/activeTerminationEditMode", true);
       },
       onTerminationEditCancel: function (oEvent) {
         const oTerminationModel = this.getView().getModel("terminationModel");
         const oODataModel = this.getView().getModel("terminationModelV4");
-        
-        // Restore original attachments list
-        const aOriginalAttachments = oTerminationModel.getProperty("/originalAttachmentsList") || [];
-        oTerminationModel.setProperty("/AttachmentsList", JSON.parse(JSON.stringify(aOriginalAttachments)));
-        
-        // Clear pending state
-        oTerminationModel.setProperty("/pendingAttachments", []);
-        oTerminationModel.setProperty("/deletedAttachmentIds", []);
-        
-        // Update merged list
-        this._getMergedAttachmentsList();
-        
         oTerminationModel.setProperty("/activeTerminationEditMode", false);
         oODataModel.resetChanges("TerminationUpdateGroup");
       },
-
-      // ============================================
-      // Event Handlers - Form Update
-      // ============================================
-
-      onTerminationUpdate: async function (oEvent) {
-        const that = this;
+      onTerminationUpdate: function (oEvent) {
         const oTerminationModel = this.getView().getModel("terminationModel");
         this._clearMessages();
         const updatedData = oTerminationModel.getProperty("/activeTermination");
         const oODataModel = this.getView().getModel("terminationModelV4");
 
-        const isMandatoryFieldsEmpty = !updatedData.status ||
-                                        !updatedData.terminationOrigin ||
-                                        !updatedData.terminationRequester ||
-                                        !updatedData.terminationResponsible ||
-                                        !updatedData.terminationReceiptDate ||
-                                        !updatedData.terminationEffectiveDate;
+        const isMandatoryFieldsEmpty =
+          !updatedData.status ||
+          !updatedData.terminationOrigin ||
+          !updatedData.terminationRequester ||
+          !updatedData.terminationResponsible ||
+          !updatedData.terminationReceiptDate ||
+          !updatedData.terminationEffectiveDate;
 
-        const isRetractedFieldsEmpty = updatedData.status === "Retracted" &&
-                                       (!updatedData.retractionReason ||
-                                        !updatedData.retractionReceivedDate);
+        const isRetractedFieldsEmpty =
+          updatedData.status === "Retracted" &&
+          (!updatedData.retractionReason ||
+            !updatedData.retractionReceivedDate);
 
         if (isMandatoryFieldsEmpty || isRetractedFieldsEmpty) {
-          oTerminationModel.setProperty("/taUpdateMessages", [{ message: "Please enter all mandatory fields", type: "Error" }]);
+          oTerminationModel.setProperty("/taUpdateMessages", [
+            { message: "Please enter all mandatory fields", type: "Error" },
+          ]);
           return;
         }
-
-        try {
-          // Step 1: Upload all pending attachments
-          const aPendingAttachments = oTerminationModel.getProperty("/pendingAttachments") || [];
-          const aPendingToUpload = [...aPendingAttachments]; // Create a copy
-          
-          for (const oPendingAttachment of aPendingToUpload) {
-            if (oPendingAttachment.file) {
-              await this._uploadAttachment(oPendingAttachment.file, updatedData.ID);
-              // Remove this pending attachment from the array after successful upload
-              const aCurrentPending = oTerminationModel.getProperty("/pendingAttachments") || [];
-              const aUpdatedPending = aCurrentPending.filter((oPending) => {
-                return oPending.tempId !== oPendingAttachment.tempId && oPending.ID !== oPendingAttachment.ID;
-              });
-              oTerminationModel.setProperty("/pendingAttachments", aUpdatedPending);
-            }
-          }
-
-          // Step 2: Delete all attachments marked for deletion
-          const aDeletedIds = oTerminationModel.getProperty("/deletedAttachmentIds") || [];
-          const aCurrentAttachments = oTerminationModel.getProperty("/AttachmentsList") || [];
-          
-          for (const oAttachment of aCurrentAttachments) {
-            // Check if this attachment should be deleted
-            let bShouldDelete = false;
-            if (oAttachment.ID && aDeletedIds.includes(oAttachment.ID)) {
-              bShouldDelete = true;
-            }
-            if (oAttachment.up__ID && oAttachment.ID) {
-              const sCompoundKey = `${oAttachment.up__ID}_${oAttachment.ID}`;
-              if (aDeletedIds.includes(sCompoundKey)) {
-                bShouldDelete = true;
-              }
-            }
-            
-            if (bShouldDelete) {
-              await this._deleteAttachmentFromDB(oAttachment);
-            }
-          }
-
-          // Step 3: Save form data
-          const oContextBinding = oODataModel.bindContext(
-            `/TerminationRequests(ID='${updatedData.ID}')`,
-            undefined,
-            { $$updateGroupId: "TerminationUpdateGroup" }
-          );
-          const oCtx = oContextBinding.getBoundContext();
-          oCtx.setProperty("status", updatedData.status);
-          oCtx.setProperty("terminationOrigin", updatedData.terminationOrigin);
+        const oContextBinding = oODataModel.bindContext(
+          `/TerminationRequests(ID='${updatedData.ID}')`,
+          undefined,
+          { $$updateGroupId: "TerminationUpdateGroup" }
+        );
+        const oCtx = oContextBinding.getBoundContext();
+        oCtx.setProperty("status", updatedData.status);
+        oCtx.setProperty("terminationOrigin", updatedData.terminationOrigin);
+        oCtx.setProperty(
+          "terminationRequester",
+          updatedData.terminationRequester
+        );
+        oCtx.setProperty(
+          "terminationResponsible",
+          updatedData.terminationResponsible
+        );
+        oCtx.setProperty(
+          "terminationReceiptDate",
+          updatedData.terminationReceiptDate
+        );
+        oCtx.setProperty(
+          "terminationEffectiveDate",
+          updatedData.terminationEffectiveDate
+        );
+        if (updatedData.status === "Retracted") {
+          oCtx.setProperty("retractionReason", updatedData.retractionReason);
           oCtx.setProperty(
-            "terminationRequester",
-            updatedData.terminationRequester
+            "retractionReceivedDate",
+            updatedData.retractionReceivedDate
           );
-          oCtx.setProperty(
-            "terminationResponsible",
-            updatedData.terminationResponsible
-          );
-          oCtx.setProperty(
-            "terminationReceiptDate",
-            updatedData.terminationReceiptDate
-          );
-          oCtx.setProperty(
-            "terminationEffectiveDate",
-            updatedData.terminationEffectiveDate
-          );
-          if (updatedData.status === "Retracted") {
-            oCtx.setProperty("retractionReason", updatedData.retractionReason);
-            oCtx.setProperty(
-              "retractionReceivedDate",
-              updatedData.retractionReceivedDate
-            );
-          }
-          
-          await oODataModel.submitBatch("TerminationUpdateGroup");
-          
-          // Step 4: Clear pending attachments and deleted IDs
-          oTerminationModel.setProperty("/pendingAttachments", []);
-          oTerminationModel.setProperty("/deletedAttachmentIds", []);
-          
-          // Step 5: Refresh attachments from DB
-          const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
-          await this._readAttachments(oActiveTermination);
-          
-          sap.m.MessageToast.show("Termination updated successfully.");
-          this._readTerminations();
-          oTerminationModel.setProperty("/activeTerminationEditMode", false);
-        } catch (oError) {
-          console.error("Error updating termination:", oError);
-          sap.m.MessageBox.error(oError.message || "Update failed");
         }
+        oODataModel
+          .submitBatch("TerminationUpdateGroup")
+          .then((oResult) => {
+            if (oResult)
+              sap.m.MessageToast.show("Termination updated successfully.");
+            this._readTerminations();
+          })
+          .catch((oError) => {
+            sap.m.MessageBox.error(oError.message || "Update failed");
+          });
+        oTerminationModel.setProperty("/activeTerminationEditMode", false);
       },
+      _uploadAllAttachments: async function (sTerminationId) {
+        const oDocsModel = this.getView().getModel("documents");
+        const aFiles = oDocsModel.getProperty("/pendingFiles") || [];
 
+        if (!aFiles.length) {
+          return; // No attachments → done
+        }
+
+        // aFiles contains File objects (see onBeforeAddAttachment)
+        for (const fileObj of aFiles) {
+          await this._uploadAttachment(fileObj, sTerminationId);
+        }
+
+        // Clear pending list only after successful uploads
+        oDocsModel.setProperty("/pendingFiles", []);
+      },
       _uploadAttachment: function (oFile, sTerminationId) {
         const that = this;
+        const oTerminationModel = this.getView().getModel("terminationModel");
+        const activeTermination = oTerminationModel.getProperty("/activeTermination");
+
+        console.log("oFile =", oFile);
+        console.log("instanceof File:", oFile instanceof File);
+        console.log("size =", oFile.size);
+
         const oODataModel = this.getView().getModel("terminationModelV4");
         if (!oODataModel) {
           return Promise.reject(new Error("OData V4 model not found."));
@@ -381,12 +357,14 @@ sap.ui.define(
 
         const oMetadata = {
           filename: oFile.name,
-          mimeType: oFile.type || this.defaultMimeType,
+          mimeType: oFile.type || "application/octet-stream",
           note: "Uploaded via UI",
         };
 
+        // Format termination key
         const sTerminationKey = this._formatKey(sTerminationId);
 
+        // Use OData v4 model's create method (automatically handles CSRF)
         const oListBinding = oODataModel.bindList(
           `/TerminationRequests(ID=${sTerminationKey})/attachments`
         );
@@ -396,59 +374,80 @@ sap.ui.define(
           .created()
           .then(async (oCreatedData) => {
             const oAttachment = oContext.getObject();
-            return that._uploadAttachmentContent(oAttachment, oFile);
+            console.log("Attachment metadata created:", oAttachment);
+
+            // Format attachment key
+            let sAttachmentKey;
+            if (oAttachment.up__ID && oAttachment.ID) {
+              const sUpId = this._formatKey(oAttachment.up__ID);
+              const sId = this._formatKey(oAttachment.ID);
+              sAttachmentKey = `up__ID=${sUpId},ID=${sId}`;
+            } else {
+              sAttachmentKey = `ID=${this._formatKey(oAttachment.ID)}`;
+            }
+
+            // Use /content endpoint for uploads
+            const sPath = `/TerminationRequestAttachments(${sAttachmentKey})/content`;
+
+            // Get the model's service URL and construct full URL
+            const sServiceUrl = oODataModel.getServiceUrl();
+            const sFullUrl = sServiceUrl.replace(/\/$/, "") + sPath;
+
+            // Convert File to ArrayBuffer
+            const fileBuffer = await oFile.arrayBuffer();
+
+            console.log("Uploading file:", {
+              fullUrl: sFullUrl,
+              size: fileBuffer.byteLength,
+              fileName: oFile.name,
+            });
+
+            // Use fetch with the model's service URL
+            // The model's create() call should have established the session
+            // and cached the CSRF token, so credentials: "include" should work
+            return fetch(sFullUrl, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/octet-stream",
+              },
+              credentials: "include", // This should use the session from the model's create() call
+              body: fileBuffer,
+            });
+          })
+          .then(async (res) => {
+            // 204 is success
+            if (res.status === 204 || res.status === 200 || res.ok) {
+              console.log("Upload response status:", res.status);
+              console.log("File uploaded successfully");
+              that._readAttachments(activeTermination);
+              return res;
+            } else {
+              const errText = await res.text();
+              throw new Error(`Upload failed (${res.status}): ${errText}`);
+            }
           })
           .catch((err) => {
             console.error("Upload failed:", err);
             throw err;
           });
       },
+      onItemRemoved: async function (oEvent) {
+        const sId = oEvent
+          .getParameter("item")
+          .getBindingContext("documents")
+          .getProperty("ID");
 
-      _uploadAttachmentContent: async function (oAttachment, oFile) {
-        const oODataModel = this.getView().getModel("terminationModelV4");
-        const sAttachmentKey = this._formatAttachmentKey(oAttachment);
+        await fetch(
+          `/terminationbackend/odata/v4/termination/TerminationRequestAttachments(${sId})`,
+          {
+            method: "DELETE",
+            credentials: "same-origin",
+          }
+        );
 
-        // Use /content endpoint for uploads
-        const sPath = `/TerminationRequestAttachments(${sAttachmentKey})/content`;
-
-        const sServiceUrl = oODataModel.getServiceUrl();
-        const sFullUrl = sServiceUrl.replace(/\/$/, "") + sPath;
-
-        const fileBuffer = await oFile.arrayBuffer();
-
-        console.log("Uploading file:", {
-          fullUrl: sFullUrl,
-          size: fileBuffer.byteLength,
-          fileName: oFile.name,
-        });
-        const res = await fetch(sFullUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": this.defaultMimeType,
-          },
-          credentials: "include", // This should use the session from the model's create() call
-          body: fileBuffer,
-        });
-
-        // 204 is success
-        if (res.status === this.httpStatusSuccess || res.status === this.httpStatusOk || res.ok) {
-          console.log("Upload response status:", res.status);
-          console.log("File uploaded successfully");
-          return res;
-        } else {
-          const errText = await res.text();
-          throw new Error(`Upload failed (${res.status}): ${errText}`);
-        }
+        sap.m.MessageToast.show("Attachment deleted");
       },
-      // ============================================
-      // Helper Methods
-      // ============================================
-
-      /**
-       * Formats OData key - quotes strings/GUIDs, leaves numbers as-is
-       * @param {string} sKey - The key to format
-       * @returns {string} Formatted key
-       */
+      // Helper: quote OData key when needed (strings/GUIDs)
       _formatKey: function (sKey) {
         if (sKey === null || sKey === undefined) return sKey;
         // If numeric, return as-is; otherwise return quoted and escape single quotes
@@ -456,23 +455,6 @@ sap.ui.define(
           return sKey;
         }
         return "'" + String(sKey).replace(/'/g, "''") + "'";
-      },
-
-      /**
-       * Formats attachment key for OData operations (handles compound and simple keys)
-       * @param {object} oAttachment - Attachment object
-       * @returns {string} Formatted attachment key
-       */
-      _formatAttachmentKey: function (oAttachment) {
-        if (oAttachment.up__ID && oAttachment.ID) {
-          // Compound key
-          const sUpId = this._formatKey(oAttachment.up__ID);
-          const sId = this._formatKey(oAttachment.ID);
-          return `up__ID=${sUpId},ID=${sId}`;
-        } else {
-          // Simple key
-          return `ID=${this._formatKey(oAttachment.ID)}`;
-        }
       },
 
       // Read attachments metadata for a termination
@@ -496,8 +478,6 @@ sap.ui.define(
               const aResults = aContexts.map((oCtx) => oCtx.getObject());
               // store on terminationModel so the UI can bind to /AttachmentsList
               oTerminationModel.setProperty("/AttachmentsList", aResults || []);
-              // Update merged list for display
-              this._getMergedAttachmentsList();
               return aResults;
             }.bind(this)
           )
@@ -521,39 +501,126 @@ sap.ui.define(
         // Create a hidden file input
         const oFileInput = document.createElement("input");
         oFileInput.type = "file";
-        oFileInput.accept = this.pdfFileExtension;
+        oFileInput.accept = ".pdf";
 
         oFileInput.onchange = (event) => {
           const oFile = event.target.files[0];
           if (!oFile) return;
 
-          // Generate a temporary ID for the pending attachment
-          const sTempId = this.tempIdPrefix + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-          
-          // Create a local attachment object
-          const oPendingAttachment = {
-            file: oFile,
-            filename: oFile.name,
-            mimeType: oFile.type || this.defaultMimeType,
-            isPending: true,
-            tempId: sTempId,
-            ID: sTempId, // Use tempId as ID for binding purposes
-            createdAt: new Date().toISOString(),
-            createdBy: this.defaultCreatedBy // You may want to get this from user context
-          };
-
-          // Add to pending attachments
-          const aPendingAttachments = oTerminationModel.getProperty("/pendingAttachments") || [];
-          aPendingAttachments.push(oPendingAttachment);
-          oTerminationModel.setProperty("/pendingAttachments", aPendingAttachments);
-
-          // Update merged list for display
-          this._getMergedAttachmentsList();
+          this._uploadAttachment(oFile, oCurrentTermination.ID);
         };
 
         oFileInput.click();
       },
 
+      _uploadAttachmentMain: function (oFile, sTerminationId) {
+        // Step 1: Create attachment metadata
+        const oAttachmentMetadata = {
+          filename: oFile.name,
+          mimeType: oFile.type || "application/octet-stream",
+          note: "Uploaded via UI",
+        };
+
+        fetch(
+          `/odata/v4/termination/TerminationRequests('${sTerminationId}')/attachments`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(oAttachmentMetadata),
+          }
+        )
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((error) => {
+                throw new Error(JSON.stringify(error));
+              });
+            }
+            return response.json();
+          })
+          .then((oAttachment) => {
+            console.log("Attachment metadata created:", oAttachment);
+
+            // Step 2: Upload file content
+            return this._uploadAttachmentContent(
+              sTerminationId,
+              oAttachment.ID,
+              oFile
+            );
+          })
+          .then(() => {
+            MessageToast.show("Attachment uploaded successfully!");
+            // Reload attachments
+            this._loadAttachments(sTerminationId);
+          })
+          .catch((oError) => {
+            console.error("Error uploading attachment:", oError);
+            MessageBox.error(
+              "Failed to upload attachment:\n\n" + oError.message
+            );
+          });
+      },
+
+      _uploadAttachmentContent: function (
+        sTerminationId,
+        sAttachmentId,
+        oFile
+      ) {
+        return new Promise((resolve, reject) => {
+          const oReader = new FileReader();
+
+          oReader.onload = () => {
+            const aBuffer = new Uint8Array(oReader.result);
+
+            fetch(
+              `/odata/v4/termination/TerminationRequests('${sTerminationId}')/attachments(ID='${sAttachmentId}')/content`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": oFile.type || "application/octet-stream",
+                },
+                body: aBuffer,
+              }
+            )
+              .then((response) => {
+                if (!response.ok) {
+                  return response.text().then((text) => {
+                    throw new Error(text || "Upload failed");
+                  });
+                }
+                resolve();
+              })
+              .then(async (oAttachment) => {
+                console.log("Attachment metadata created:", oAttachment);
+
+                // 2) Upload file binary to $value
+                const sUploadUrl = `/odata/v4/termination/TerminationRequestAttachments(${oAttachment.ID})/$value`;
+
+                return fetch(sUploadUrl, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": oFile.type || "application/octet-stream",
+                  },
+                  body: oFile,
+                });
+              })
+              .then((res) => {
+                if (!res.ok) {
+                  throw new Error("Failed to upload binary.");
+                }
+                console.log("File uploaded successfully");
+              })
+              .catch(reject);
+          };
+
+          oReader.onerror = () => {
+            reject(new Error("Failed to read file"));
+          };
+
+          oReader.readAsArrayBuffer(oFile);
+        });
+      },
 
       onDownload: function (oEvent) {
         const oSource = oEvent.getSource();
@@ -562,53 +629,30 @@ sap.ui.define(
 
         this._downloadAttachment(oAttachment);
       },
-      
+
       // Download binary for an attachment and trigger browser download
       _downloadAttachment: async function (oAttachment) {
-        if (!oAttachment) {
+        if (!oAttachment || !oAttachment.ID) {
           sap.m.MessageToast.show("Attachment not available.");
           return;
         }
 
-        // Handle pending attachments (local files)
-        if (oAttachment.isPending && oAttachment.file) {
-          try {
-            const blob = oAttachment.file;
-            const fileName = oAttachment.filename || oAttachment.file.name || this.defaultFileName;
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-            sap.m.MessageToast.show("Download started");
-            return;
-          } catch (err) {
-            console.error("Error downloading pending attachment:", err);
-            sap.m.MessageBox.error(err.message || "Failed to download attachment.");
-            return;
-          }
-        }
-
-        if (!oAttachment.ID) {
-          sap.m.MessageToast.show("Attachment not available.");
-          return;
-        }
-
-        // Prefer server-provided media link if present
         let sMediaLink =
           oAttachment["@odata.mediaReadLink"] ||
           oAttachment["@odata.mediaEditLink"];
 
-        // Build URL manually if server didn't provide a link
         if (!sMediaLink) {
-          // For downloads, we only need the ID part (not the full compound key)
-          const sAttachmentId = this._formatKey(oAttachment.ID);
-          const sAttachmentKey = `ID=${sAttachmentId}`;
-          
-          // Use /content endpoint for downloads
+          let sAttachmentKey;
+          if (oAttachment.up__ID && oAttachment.ID) {
+            const sUpId = this._formatKey(oAttachment.up__ID);
+            const sId = this._formatKey(oAttachment.ID);
+            sAttachmentKey = `ID=${sId}`;
+          } else {
+            sAttachmentKey = `ID=${this._formatKey(oAttachment.ID)}`;
+          }
+
+          // Use /$value for downloads (standard OData v4 endpoint for reading media)
+          // sMediaLink = `/terminationbackend/odata/v4/termination/TerminationRequestAttachments(${sAttachmentKey})/$value`;
           sMediaLink = `/terminationbackend/odata/v4/termination/TerminationRequests(${oAttachment.up__ID})/attachments(${sAttachmentKey})/content`;
         } else {
           // If server returned a relative media link, make sure it's using the same backend prefix
@@ -658,7 +702,7 @@ sap.ui.define(
               // Use fallback response
               const blob = await resFallback.blob();
               const fileName =
-                oAttachment.filename || oAttachment.name || this.defaultFileName;
+                oAttachment.filename || oAttachment.name || "attachment";
               const url = window.URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;
@@ -678,7 +722,7 @@ sap.ui.define(
           // Get the blob from response
           const blob = await res.blob();
           const fileName =
-            oAttachment.filename || oAttachment.name || this.defaultFileName;
+            oAttachment.filename || oAttachment.name || "attachment";
 
           // Create download link and trigger download
           const url = window.URL.createObjectURL(blob);
@@ -703,118 +747,359 @@ sap.ui.define(
         const oSource = oEvent.getSource();
         const oContext = oSource.getBindingContext("terminationModel");
         const oAttachment = oContext.getObject();
-        const oTerminationModel = this.getView().getModel("terminationModel");
 
-        if (!oAttachment) {
+        if (!oAttachment || !oAttachment.ID) {
+          sap.m.MessageBox.error("Attachment not available.");
+          return;
+        }
+
+        sap.m.MessageBox.confirm(
+          "Are you sure you want to delete this attachment?",
+          {
+            icon: sap.m.MessageBox.Icon.WARNING,
+            title: "Confirm Delete",
+            actions: [
+              sap.m.MessageBox.Action.OK,
+              sap.m.MessageBox.Action.CANCEL,
+            ],
+            onClose: (sAction) => {
+              if (sAction === sap.m.MessageBox.Action.OK) {
+                this._deleteAttachment(oAttachment);
+              }
+            },
+          }
+        );
+      },
+
+      _deleteAttachment: async function (oAttachment) {
+        if (!oAttachment || !oAttachment.ID) {
           sap.m.MessageToast.show("Attachment not available.");
           return;
         }
 
-        // Check if it's a pending attachment (has isPending flag or tempId)
-        if (oAttachment.isPending || (oAttachment.tempId && oAttachment.tempId.startsWith(this.tempIdPrefix))) {
-          // Remove from pending attachments
-          const aPendingAttachments = oTerminationModel.getProperty("/pendingAttachments") || [];
-          const aFilteredPending = aPendingAttachments.filter((oPending) => {
-            return oPending.tempId !== oAttachment.tempId && oPending.ID !== oAttachment.ID;
-          });
-          oTerminationModel.setProperty("/pendingAttachments", aFilteredPending);
+        // Format attachment key - check if compound key (up__ID) or simple key (ID)
+        let sAttachmentKey;
+        if (oAttachment.up__ID && oAttachment.ID) {
+          // Compound key
+          const sUpId = this._formatKey(oAttachment.up__ID);
+          const sId = this._formatKey(oAttachment.ID);
+          sAttachmentKey = `up__ID=${sUpId},ID=${sId}`;
         } else {
-          // It's an existing attachment - mark for deletion
-          const aDeletedIds = oTerminationModel.getProperty("/deletedAttachmentIds") || [];
-          
-          // Add ID to deleted list (handle compound keys)
-          if (oAttachment.up__ID && oAttachment.ID) {
-            const sCompoundKey = `${oAttachment.up__ID}_${oAttachment.ID}`;
-            if (!aDeletedIds.includes(sCompoundKey)) {
-              aDeletedIds.push(sCompoundKey);
-            }
-            // Also add individual IDs for simpler matching
-            if (!aDeletedIds.includes(oAttachment.ID)) {
-              aDeletedIds.push(oAttachment.ID);
-            }
-          } else if (oAttachment.ID && !aDeletedIds.includes(oAttachment.ID)) {
-            aDeletedIds.push(oAttachment.ID);
-          }
-          
-          oTerminationModel.setProperty("/deletedAttachmentIds", aDeletedIds);
+          // Simple key
+          sAttachmentKey = `ID=${this._formatKey(oAttachment.ID)}`;
         }
-
-        // Update merged list to reflect changes
-        this._getMergedAttachmentsList();
-        
-        sap.m.MessageToast.show("Attachment removed");
-      },
-
-      /**
-       * Deletes attachment from database (for batch operations, doesn't refresh UI)
-       * @param {object} oAttachment - Attachment object to delete
-       * @returns {Promise} Promise that resolves on success, rejects on error
-       */
-      _deleteAttachmentFromDB: async function (oAttachment) {
-        if (!oAttachment || !oAttachment.ID) {
-          return Promise.reject(new Error("Attachment not available."));
-        }
-
-        const sAttachmentKey = this._formatAttachmentKey(oAttachment);
 
         const sDeleteUrl = `/terminationbackend/odata/v4/termination/TerminationRequestAttachments(${sAttachmentKey})`;
 
-        const res = await fetch(sDeleteUrl, {
-          method: "DELETE",
-          credentials: "same-origin",
-        });
+        try {
+          console.log("Deleting attachment:", sDeleteUrl);
 
-        // 204 No Content is a valid success response for DELETE
-        if (res.status === this.httpStatusSuccess || res.status === this.httpStatusOk || res.ok) {
-          console.log("Attachment deleted from DB (status:", res.status + ")");
-          return Promise.resolve();
-        } else {
-          const errText = await res.text();
-          return Promise.reject(new Error(`Delete failed (${res.status}): ${errText}`));
+          const res = await fetch(sDeleteUrl, {
+            method: "DELETE",
+            credentials: "same-origin",
+          });
+
+          // 204 No Content is a valid success response for DELETE
+          if (res.status === 204 || res.status === 200 || res.ok) {
+            console.log(
+              "Attachment deleted successfully (status:",
+              res.status + ")"
+            );
+            sap.m.MessageToast.show("Attachment deleted successfully");
+
+            // Refresh attachments list
+            const oTerminationModel =
+              this.getView().getModel("terminationModel");
+            const oActiveTermination =
+              oTerminationModel.getProperty("/activeTermination");
+            if (oActiveTermination) {
+              this._readAttachments(oActiveTermination);
+            }
+          } else {
+            const errText = await res.text();
+            throw new Error(`Delete failed (${res.status}): ${errText}`);
+          }
+        } catch (err) {
+          console.error("Error deleting attachment:", err);
+          sap.m.MessageBox.error(err.message || "Failed to delete attachment.");
         }
       },
 
-      /**
-       * Clears update messages from the model
-       */
       _clearMessages: function () {
         const oTerminationModel = this.getView().getModel("terminationModel");
         oTerminationModel.setProperty("/taUpdateMessages", []);
       },
-
-      /**
-       * Merges existing attachments with pending attachments and filters deleted ones
-       * Updates the mergedAttachmentsList in the model for UI binding
-       * @returns {Array} Merged array of attachments
-       */
-      _getMergedAttachmentsList: function () {
-        const oTerminationModel = this.getView().getModel("terminationModel");
-        const aExistingAttachments = oTerminationModel.getProperty("/AttachmentsList") || [];
-        const aPendingAttachments = oTerminationModel.getProperty("/pendingAttachments") || [];
-        const aDeletedIds = oTerminationModel.getProperty("/deletedAttachmentIds") || [];
-
-        // Filter out deleted attachments from existing list
-        const aFilteredExisting = aExistingAttachments.filter((oAttachment) => {
-          // Check if this attachment should be deleted
-          if (oAttachment.ID && aDeletedIds.includes(oAttachment.ID)) {
-            return false;
-          }
-          // For compound keys, check both IDs
-          if (oAttachment.up__ID && oAttachment.ID) {
-            const sCompoundKey = `${oAttachment.up__ID}_${oAttachment.ID}`;
-            return !aDeletedIds.includes(sCompoundKey);
-          }
-          return true;
-        });
-
-        // Combine filtered existing with pending
-        const aMerged = [...aFilteredExisting, ...aPendingAttachments];
+      
+      // ===== Value Help Handlers =====
+      // Value help for termination requester
+      onValueHelpRequester: function (oEvent) {
+        const oInput = oEvent.getSource();
+        const oDialog = oEvent.getParameter("valueHelp");
+        const oView = this.getView();
+        const oTerminationModel = oView.getModel("terminationModel");
+        const sOpportunityID = oTerminationModel.getProperty("/OpportunityID");
         
-        // Update the merged list in model for binding
-        oTerminationModel.setProperty("/mergedAttachmentsList", aMerged);
+        if (!this._oSelectDialogRequester) {
+          this._oSelectDialogRequester = new sap.m.SelectDialog({
+            title: "Select Termination Requestor",
+            noDataText: "No Data",
+            contentWidth: "800px",
+            contentHeight: "600px",
+            confirm: this._onSelectRequester.bind(this),
+            cancel: function () {
+              this._oSelectDialogRequester.close();
+            }.bind(this),
+          });
+          oView.addDependent(this._oSelectDialogRequester);
+        }
         
-        return aMerged;
-      }
+        // Fetch and display contact persons
+        this._fetchContactPersons()
+          .then((aItems) => {
+            const oTemplate = new sap.m.StandardListItem({
+              title: "{selectModel>formattedName}",
+              description: "{selectModel>eMail}",
+              type: "Active",
+              
+            });
+            this._oSelectDialogRequester.setModel(
+              new JSONModel({ items: aItems }),
+              "selectModel"
+            );
+            this._oSelectDialogRequester.bindAggregation("items", "selectModel>/items", oTemplate);
+            this._oSelectDialogRequester.open();
+          })
+          .catch((err) => {
+            console.error("Error fetching contact persons:", err);
+            sap.m.MessageBox.error("Failed to load contact persons.");
+          });
+      },
+      // Value help for termination responsible
+      onValueHelpResponsible: function (oEvent) {
+        const oInput = oEvent.getSource();
+        const oView = this.getView();
+        
+        if (!this._oSelectDialogResponsible) {
+          this._oSelectDialogResponsible = new sap.m.SelectDialog({
+            title: "Select Termination Responsible",
+            noDataText: "No Data",
+            contentWidth: "800px",
+            contentHeight: "600px",
+            confirm: this._onSelectResponsible.bind(this),
+            cancel: function () {
+              this._oSelectDialogResponsible.close();
+            }.bind(this),
+          });
+          oView.addDependent(this._oSelectDialogResponsible);
+        }
+        
+        this._fetchEmployees()
+          .then((aItems) => {
+            const oTemplate = new sap.m.StandardListItem({
+              title: "{selectModel>formattedName}",
+              description: "{selectModel>workplaceAddress/eMail}",
+              type: "Active",
+            });
+            this._oSelectDialogResponsible.setModel(
+              new JSONModel({ items: aItems }),
+              "selectModel"
+            );
+            this._oSelectDialogResponsible.bindAggregation("items", "selectModel>/items", oTemplate);
+            this._oSelectDialogResponsible.open();
+          })
+          .catch((err) => {
+            console.error("Error fetching employees:", err);
+            sap.m.MessageBox.error("Failed to load employees.");
+          });
+      },
+      onSuggestionRequester: function (oEvent) {
+        const sValue = oEvent.getParameter("suggestValue");
+        const oInput = oEvent.getSource();
+        const oView = this.getView();
+        const oTerminationModel = oView.getModel("terminationModel");
+        const sOpportunityID = oTerminationModel.getProperty("/OpportunityID");
+        const that = this;
+        
+        // Get dialog and its model
+        if (this._pDialog) {
+          this._pDialog.then((oDialog) => {
+            const oValueHelpModel = oDialog.getModel("valueHelpModel");
+            
+            // Clear previous timeout
+            if (that._suggestionTimeoutRequester) {
+              clearTimeout(that._suggestionTimeoutRequester);
+            }
+            
+            // Debounce search
+            that._suggestionTimeoutRequester = setTimeout(() => {
+              that._fetchContactPersons(sValue)
+                .then((aItems) => {
+                  if (oValueHelpModel) {
+                    oValueHelpModel.setProperty("/requesterSuggestions", aItems);
+                  }
+                })
+                .catch((err) => {
+                  console.error("Error fetching suggestions:", err);
+                });
+            }, 300);
+          });
+        }
+      },
+      onSuggestionResponsible: function (oEvent) {
+        const sValue = oEvent.getParameter("suggestValue");
+        const oInput = oEvent.getSource();
+        const oView = this.getView();
+        const that = this;
+        
+        // Get dialog and its model
+        if (this._pDialog) {
+          this._pDialog.then((oDialog) => {
+            const oValueHelpModel = oDialog.getModel("valueHelpModel");
+            
+            // Clear previous timeout
+            if (that._suggestionTimeoutResponsible) {
+              clearTimeout(that._suggestionTimeoutResponsible);
+            }
+            
+            // Debounce search
+            that._suggestionTimeoutResponsible = setTimeout(() => {
+              that._fetchEmployees(sValue)
+                .then((aItems) => {
+                  if (oValueHelpModel) {
+                    oValueHelpModel.setProperty("/responsibleSuggestions", aItems);
+                  }
+                })
+                .catch((err) => {
+                  console.error("Error fetching suggestions:", err);
+                });
+            }, 300);
+          });
+        }
+      },
+      onRequesterSelected: function (oEvent) {
+        const oSelectedItem = oEvent.getParameter("selectedItem");
+        const oContext = oSelectedItem.getBindingContext("valueHelpModel");
+        if (oContext) {
+          const oData = oContext.getObject();
+          const oInput = oEvent.getSource();
+          // Value is automatically set to formattedName, but we can store additional data if needed
+          // For example, store the ID in a hidden field or data property
+          if (oData.id || oData.displayId) {
+            oInput.data("selectedId", oData.id || oData.displayId);
+          }
+        }
+      },
+      onResponsibleSelected: function (oEvent) {
+        const oSelectedItem = oEvent.getParameter("selectedItem");
+        const oContext = oSelectedItem.getBindingContext("valueHelpModel");
+        if (oContext) {
+          const oData = oContext.getObject();
+          const oInput = oEvent.getSource();
+          // Value is automatically set to formattedName, but we can store additional data if needed
+          if (oData.id || oData.displayId || oData.employeeDisplayId) {
+            oInput.data("selectedId", oData.id || oData.displayId || oData.employeeDisplayId);
+          }
+        }
+      },
+      _onSelectRequester: function (oEvent) {
+        const oView = this.getView();
+        const oTerminationModel = oView.getModel("terminationModel");
+        const oSelectedItem = oEvent.getParameter("selectedItem");
+        const oContext = oSelectedItem.getBindingContext("selectModel");
+        if (oContext) {
+          const oData = oContext.getObject();
+          if (oTerminationModel.getProperty("/createOpen")) {
+            const oCreateModel = this._pDialog.getModel("createModel");
+            oCreateModel.setProperty("/requestor", oData);
+          }
+        }
+        // this._oSelectDialogRequester.close();
+      },
+      _onSelectResponsible: function (oEvent) {
+        const oView = this.getView();
+        const oTerminationModel = oView.getModel("terminationModel");
+        const oSelectedItem = oEvent.getParameter("selectedItem");
+        const oContext = oSelectedItem.getBindingContext("selectModel");
+        if (oContext) {
+          const oData = oContext.getObject();
+          if (oTerminationModel.getProperty("/createOpen")) {
+            const oCreateModel = this._pDialog.getModel("createModel");
+            oCreateModel.setProperty("/responsible", oData);
+          }
+        }
+        // this._oSelectDialogResponsible.close();
+      },
+      _fetchContactPersons: async function (sSearch) {
+        const oView = this.getView();
+        const oTerminationModel = oView.getModel("terminationModel");
+        const sAccountId = oTerminationModel.getProperty("/oppAccountID");
+        try {
+          let sUrl = "/sapsalesservicecloudv2/contact-person-service/contactPersons?$top=200";
+          
+          // Add accountid filter if available (from context, not user input)
+          if (sAccountId) {
+            sUrl += `&$filter=accountId eq '${sAccountId}'`;
+          }
+          
+          // Add search filter if provided
+          if (sSearch) {
+            const sSearchFilter = `(contains(formattedName,'${sSearch}') or contains(eMail,'${sSearch}'))`;
+            if (sAccountId) {
+              sUrl += ` and ${sSearchFilter}`;
+            } else {
+              sUrl += `&$filter=${sSearchFilter}`;
+            }
+          }
+          
+          const res = await fetch(sUrl, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Accept": "application/json",
+            },
+          });
+          
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          
+          const oData = await res.json();
+          // Handle both array and object with results property
+          return Array.isArray(oData) ? oData : (oData.value || oData.results || []);
+        } catch (err) {
+          console.error("Error fetching contact persons:", err);
+          throw err;
+        }
+      },
+      _fetchEmployees: async function (sSearch) {
+        try {
+          let sUrl = "/sapsalesservicecloudv2/employee-service/employees";
+          
+          // Add search filter if provided
+          if (sSearch) {
+            sUrl += `?$filter=(contains(formattedName,'${sSearch}') or contains(eMail,'${sSearch}'))`;
+          }
+          
+          const res = await fetch(sUrl, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Accept": "application/json",
+            },
+          });
+          
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          
+          const oData = await res.json();
+          // Handle both array and object with results property
+          return Array.isArray(oData) ? oData : (oData.value || oData.results || []);
+        } catch (err) {
+          console.error("Error fetching employees:", err);
+          throw err;
+        }
+      },
     });
   }
 );

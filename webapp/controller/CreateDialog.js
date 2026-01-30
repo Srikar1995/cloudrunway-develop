@@ -7,27 +7,40 @@ sap.ui.define(
       openCreateTermination: function () {
         const oView = this.getView();
         const oTerminationModel = oView.getModel("terminationModel");
-        if (!this._pDialog) {
-          const oCreateModel = new JSONModel({
-            businessScenario: "",
-            terminationOrigin: "",
-            riskReason: "",
-            requestor: "",
-            responsible: "",
-            receiptDate: "",
-            effectData: "",
-            AttachmentsList: [],
-            taCreateMessages: []
-          });
-          this._pDialog = sap.ui.xmlfragment(
-            "cloudrunway.view.fragments.CreateDialog",
-            this
-          );
-          this._pDialog.setModel(oCreateModel, "createModel");
-          oView.addDependent(this._pDialog);
+        oTerminationModel.setProperty("/taMessages",[]);
+        const oPrevalidationData = oTerminationModel.getProperty("/preValidationData");
+        if (!oPrevalidationData.canCreateTermination) {
+          const sMessage = oPrevalidationData?.validationResults.find((validation)=>!validation.passed).message;
+          oTerminationModel.setProperty("/taMessages", [
+              {
+                message: sMessage,
+                type: "Error",
+              },
+            ])
+        } else {
+          if (!this._pDialog) {
+            const oCreateModel = new JSONModel({
+              businessScenario: "",
+              terminationOrigin: "",
+              riskReason: "",
+              requestor: "",
+              responsible: "",
+              receiptDate: "",
+              effectData: "",
+              AttachmentsList: [],
+              taCreateMessages: [],
+              loading: false
+            });
+            this._pDialog = sap.ui.xmlfragment(
+              "cloudrunway.view.fragments.CreateDialog",
+              this
+            );
+            this._pDialog.setModel(oCreateModel, "createModel");
+            oView.addDependent(this._pDialog);
+          }
+          this._pDialog.open();
+          oTerminationModel.setProperty("/createOpen", true);
         }
-        this._pDialog.open();
-        oTerminationModel.setProperty("/createOpen", true);
       },
       onAddAttachment: function () {
         const oView = this.getView();
@@ -65,7 +78,7 @@ sap.ui.define(
         const oTerminationModel = oView.getModel("terminationModel");
         const oCreateModel = this._pDialog.getModel("createModel");
         let nonPdfExists = false;
-        oCreateModel.setProperty("/taCreateMessages", []);
+        this.CreateDialog._clearMessages.call(this);
 
         const aFiles = oCreateModel.getProperty("/AttachmentsList")
         const sBusinessScenario = oCreateModel.getProperty("/businessScenario");
@@ -80,12 +93,12 @@ sap.ui.define(
         const sTerminationEffectiveDate =
           oCreateModel.getProperty("/effectData");
 
-        if ( !sTerminationOrigin || !sTerminationRequester || !sTerminationResponsible || !sTerminationReceiptDate || !sTerminationEffectiveDate) {
+        if (!sTerminationOrigin || !sTerminationRequester || !sTerminationResponsible || !sTerminationReceiptDate || !sTerminationEffectiveDate) {
           oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("MANDATORYERROR"), type: "Error" }]);
           return;
         }
 
-        if( !aFiles?.length ) {
+        if (!aFiles?.length) {
           oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("ATTACHMENTERROR"), type: "Error" }]);
           return;
         }
@@ -107,17 +120,15 @@ sap.ui.define(
           contractEndDate: "2025-12-31",
           terminationEffectiveDate: sTerminationEffectiveDate,
           terminationReceiptDate: sTerminationReceiptDate,
-          terminationRequester: sTerminationRequester,
-          terminationResponsible: sTerminationResponsible,
+          terminationRequester: sTerminationRequester?.id,
+          terminationResponsible: sTerminationResponsible?.id,
           renewalRiskReason: sRenewalRiskReason || null,
           opportunityId: oTerminationModel.getProperty("/OpportunityID"),
+          subscriptionContractId: oTerminationModel.getProperty("/subscriptionContractId")
         };
 
         this.CreateDialog._submitTerminationToBackend.call(this, oPayload);
       },
-      /**
-       * Creates a Termination Request
-       */
       _submitTerminationToBackend: function (oPayload) {
         const that = this;
         const oODataModel = that.getView().getModel("terminationModelV4");
@@ -127,42 +138,45 @@ sap.ui.define(
           return;
         }
 
+        oCreateModel.setProperty("/loading", false);
         const oListBinding = oODataModel.bindList("/TerminationRequests",
           null,
           null,
           null,
           {
-              $$groupId: "$direct"
+            $$groupId: "$direct"
           });
-          oListBinding.attachCreateCompleted((oEvent)=>{
-            if (!oEvent.getParameter("success")) {
-              const oMessage = oEvent.getSource()?.getModel()?.getMessagesByPath("")?.[0];
-              if (oMessage) {
-                oCreateModel.setProperty("/taCreateMessages", [{ message: oMessage.message, type: oMessage.type }]);
-              }
+        oListBinding.attachCreateCompleted((oEvent) => {
+          if (!oEvent.getParameter("success")) {
+            const oMessages = oODataModel.getMessagesByPath("");
+            const oMessage = oMessages[oMessages?.length - 1];
+            if (oMessage) {
+              oCreateModel.setProperty("/taCreateMessages", [{ message: oMessage.message, type: oMessage.type }]);
             }
-          });
+          }
+          oCreateModel.setProperty("/loading", false);
+        });
         const oContext = oListBinding.create(oPayload);
 
         oContext
           .created()
           .then(
             async function (oCreatedData, oResponse) {
-            const oCreatedObject = oContext.getObject();
-            const sNewTerminationId = oCreatedObject.ID;
-            try {
-              await that.CreateDialog._uploadAllAttachments.call(
-                that,
-                sNewTerminationId
-              );
-              that.CreateDialog.onCloseTerminationDialog.call(that);
-              that._readTerminations();
-            } catch (err) {
-              sap.m.MessageBox.error(
-                err.message || "Error uploading attachments."
-              );
-            }
-          })
+              const oCreatedObject = oContext.getObject();
+              const sNewTerminationId = oCreatedObject.ID;
+              try {
+                await that.CreateDialog._uploadAllAttachments.call(
+                  that,
+                  sNewTerminationId
+                );
+                that.CreateDialog.onCloseTerminationDialog.call(that);
+                that._readTerminations();
+              } catch (err) {
+                sap.m.MessageBox.error(
+                  err.message || "Error uploading attachments."
+                );
+              }
+            })
           .catch(function (oError) {
             sap.m.MessageBox.error(
               oError.message || "Error submitting termination."
@@ -261,6 +275,12 @@ sap.ui.define(
         const oTerminationModel = this.getView().getModel("terminationModel");
         this._pDialog.close();
         oTerminationModel.setProperty("/createOpen", false);
+      },
+      _clearMessages: function () {
+        const oCreateModel = this._pDialog.getModel("createModel");
+        const oODataModelV4 = this.getView().getModel("terminationModelV4");
+        oCreateModel.setProperty("/taCreateMessages", []);
+        oODataModelV4.setMessages([]);
       },
     };
   }
