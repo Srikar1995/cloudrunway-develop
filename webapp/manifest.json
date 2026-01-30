@@ -1,0 +1,148 @@
+{
+  "_version": "1.76.0",
+  "sap.app": {
+    "id": "cloudrunway",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "1.0.0"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:basic",
+      "version": "1.19.5",
+      "toolsId": "d738e644-49a1-4764-bac7-ae2caffd137e"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/terminationbackend/odata/v4/termination/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/TerminationService/metadata.xml",
+          "odataVersion": "4.0",
+          "groupProperties": {
+            "TerminationUpdateGroup": {
+              "submit": "API" 
+            }
+          }
+        }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "cloudrunway-termination": {
+          "semanticObject": "cloudrunway",
+          "action": "termination",
+          "title": "{{cloudrunway-termination.flpTitle}}",
+          "subTitle": "{{cloudrunway-termination.flpSubtitle}}",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.142.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "cloudrunway.i18n.i18n"
+        }
+      },
+      "terminationModelV4": {
+        "dataSource": "mainService",
+        "type": "sap.ui.model.odata.v4.ODataModel",
+        "settings": {
+          "synchronizationMode": "None",
+          "operationMode": "Server",
+          "groupId": "$direct",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {}
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "controlAggregation": "pages",
+        "controlId": "app",
+        "transition": "slide",
+        "type": "View",
+        "viewType": "XML",
+        "path": "cloudrunway.view",
+        "async": true,
+        "viewPath": "cloudrunway.view"
+      },
+      "routes": [
+        {
+          "name": "RouteTermination",
+          "pattern": ":?query:",
+          "target": [
+            "TargetTermination"
+          ]
+        }
+      ],
+      "targets": {
+        "TargetTermination": {
+          "id": "Termination",
+          "name": "Termination"
+        }
+      }
+    },
+    "rootView": {
+      "viewName": "cloudrunway.view.App",
+      "type": "XML",
+      "id": "App",
+      "async": true
+    }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "cloudrunway"
+  }
+}

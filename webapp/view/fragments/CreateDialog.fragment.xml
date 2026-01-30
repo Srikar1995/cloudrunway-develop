@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<core:FragmentDefinition xmlns:core="sap.ui.core" xmlns="sap.m" xmlns:f="sap.ui.layout.form" xmlns:layout="sap.ui.layout" xmlns:mvc="sap.ui.core.mvc" xmlns:upload="sap.m.upload" xmlns:ux="sap.uxap">
+   <Dialog id="create_termination_dialog" title="New Termination" contentWidth="1200px" contentHeight="auto">
+      <content>
+         <VBox id="vboxCreateMessage" class="sapUiSmallMargin" visible="{= ${createModel>/taCreateMessages}.length > 0}">
+            <MessageStrip
+                     text="{= ${createModel>/taCreateMessages/0/message}}"
+                     type="{= ${createModel>/taCreateMessages/0/type}}"
+                     showIcon="true"
+                     showCloseButton="true">
+            </MessageStrip>
+         </VBox>
+         <VBox id="vboxTerminationDetails" class="sapUiSmallMarginTop">
+            <OverflowToolbar design="Solid" style="Clear" class="sapMListHdr sapMTBHeader-CTX sapUiSmallMarginBegin">
+               <Title text="{i18n>createDetails}" />
+            </OverflowToolbar>
+            <Panel>
+               <layout:Grid defaultSpan="L4 M6 S12" hSpacing="0" vSpacing="0" class="sapMTBStandard sapUiSmallMarginBottom borderColor sapUiSmallMarginBegin sapUiSmallMarginEnd">
+                  <layout:content>
+                     <VBox height="50px" class="sapUiSmallMarginEnd">
+                        <HBox>
+                           <Label id="lblBusinessScenario" text="{i18n>businessScenario}" />
+                           <core:Icon
+                              class="sapUiSmallMarginBegin"
+                              src="sap-icon://information"
+                              color="#0070f2"
+                              tooltip="More info" />
+                        </HBox>
+                        <Select id="selBusinessScenario" forceSelection="false" items="{terminationModel&gt;/ScenarioTypeList}" width="100%" selectedKey="{createModel>/businessScenario}">
+                           <core:Item id="itemBusinessScenario" key="{terminationModel&gt;key}" text="{terminationModel&gt;text}" />
+                        </Select>
+                     </VBox>
+                     <VBox height="50px" class="sapUiSmallMarginEnd" >
+                        <Label id="lblTerminationOrigin" text="{i18n>terminationOrigin}" required="true"/>
+                        <Select id="selTerminationOrigin" forceSelection="false" width="100%" items="{terminationModel&gt;/TerminationOriginList}" selectedKey="{createModel>/terminationOrigin}">
+                           <core:Item id="itemTerminationOrigin" key="{terminationModel&gt;key}" text="{terminationModel&gt;text}" />
+                        </Select>
+                     </VBox>
+                     <VBox height="50px" class="sapUiSmallMarginBottom" >
+                        <HBox>
+                           <Label id="lblRenewalRiskReason" text="{i18n>renRiskReason}"/>
+                           <core:Icon
+                              class="sapUiSmallMarginBegin"
+                              src="sap-icon://information"
+                              color="#0070f2"
+                              tooltip="More info" />
+                        </HBox>
+                        <Input id="inpRenewalRiskReason" editable="true" width="100%" value="{createModel>/riskReason}" />
+                     </VBox>
+                    </layout:content>
+                </layout:Grid>
+                <layout:Grid defaultSpan="L4 M6 S12" hSpacing="0" vSpacing="0" class="sapMTBStandard sapUiSmallMarginBottom borderColor sapUiSmallMarginBegin sapUiSmallMarginEnd">
+                    <layout:content>
+                     <VBox height="50px" class="sapUiSmallMarginEnd">
+                        <Label id="lblTerminationRequester" text="{i18n>terminationRequestor}" required="true"/>
+                        <Input id="inpTerminationRequester" placeholder="{i18n>enterRequestorName}" value="{createModel>/requestor}"/>
+                     </VBox>
+                     <VBox height="50px" class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <Label id="lblTerminationResponsible" text="{i18n>terminationResponsible}" required="true"/>
+                        <Input id="inpTerminationResponsible" placeholder="{i18n>enterResponsibleName}" value="{createModel>/responsible}"/>
+                     </VBox>
+                     </layout:content>
+                </layout:Grid>
+                <layout:Grid defaultSpan="L4 M6 S12" hSpacing="0" vSpacing="0" class="sapUiSmallMarginBottom sapUiSmallMarginBegin sapUiSmallMarginEnd">
+                    <layout:content>
+                     <VBox height="50px" class="sapUiSmallMarginEnd">
+                        <Label id="lblTerminationReceiptDate" text="{i18n>terminationRecipientDate}" required="true"/>
+                        <DatePicker id="dpTerminationReceiptDate" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Date" value="{createModel>/receiptDate}"/>
+                     </VBox>
+                     <VBox height="50px" class="sapUiSmallMarginEnd">
+                        <Label id="lblTerminationEffectiveDate" text="{i18n>terminationEffectDate}" required="true"/>
+                        <DatePicker id="dpTerminationEffectiveDate" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Date" value="{createModel>/effectData}"/>
+                     </VBox>
+                  </layout:content>
+               </layout:Grid>
+            </Panel>
+         </VBox>
+         <VBox id="vboxTerminationAttachments">
+            <OverflowToolbar design="Solid" class="sapMListHdr sapMTBHeader-CTX">
+               <Title text="{i18n>createAttachments}" class="sapUiSmallMarginBegin"/>
+               <ToolbarSpacer/>
+               <Button text="{i18n>upload}" id="upload" press=".CreateDialog.onAddAttachment" type="Ghost" class="sapUiSmallMarginEnd"/>
+            </OverflowToolbar>
+            <List items="{createModel>/AttachmentsList}" noDataText="{i18n>noAttachmentsAdded}">
+               <CustomListItem>
+                     <HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginTopBottom sapUiMediumMarginBeginEnd">
+                        <HBox alignItems="Center">
+                           <core:Icon src="sap-icon://pdf-attachment" size="2rem" color="#D73027" class="sapUiSmallMarginEnd" />
+                           <VBox>
+                              <Text text="{createModel>name}" />
+                           </VBox>
+                        </HBox>
+                        <HBox>
+                           <Button icon="sap-icon://delete" type="Ghost" press=".CreateDialog.onDeleteAttachment" tooltip="Delete" />
+                        </HBox>
+                     </HBox>
+               </CustomListItem>
+            </List>
+         </VBox>
+      </content>
+      <beginButton>
+         <Button id="terminationSave" text="Create" press=".CreateDialog.onSubmitTermination" type="Emphasized" />
+      </beginButton>
+      <endButton>
+         <Button id="terminatinCancel" text="Cancel" press=".CreateDialog.onCloseTerminationDialog" />
+      </endButton>
+   </Dialog>
+</core:FragmentDefinition>

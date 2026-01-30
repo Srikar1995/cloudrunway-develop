@@ -1,0 +1,15 @@
+/* Enter your custom styles here */
+
+.customFullWidthStatus {
+  width:100% !important;
+  display:block !important;
+  max-width:100% !important;
+  white-space:nowrap;
+}
+.borderColor {
+  border-color: #E5E5E5 !important;
+}
+
+.tableRowHeight .sapMListTblRow {
+  height: 40px!important;
+}

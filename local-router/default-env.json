@@ -1,0 +1,65 @@
+{
+    "destinations": [
+        {
+            "name": "local",
+            "url": "http://localhost:8080",
+            "forwardAuthToken": true
+        }
+    ],
+    "VCAP_SERVICES": {
+        "xsuaa": [
+            {
+                "name": "compliance-app-uaa",
+                "label": "xsuaa",
+                "tags": [
+                    "xsuaa"
+                ],
+                "credentials": {
+                    "tenantmode": "dedicated",
+                    "sburl": "https://internal-xsuaa.authentication.eu10.hana.ondemand.com",
+                    "subaccountid": "b3736226-8612-4807-9d10-4ae4f33a0381",
+                    "credential-type": "binding-secret",
+                    "clientid": "sb-cloudrunway!t192469",
+                    "xsappname": "cloudrunway!t192469",
+                    "clientsecret": "fa21eab2-da27-45e9-b482-1ef49657ad82$hm3O_jNl8odXJn5ab7L0PO6wHyqeceWpFxZ7jbBLpFI=",
+                    "serviceInstanceId": "1e56f7d9-af38-4f84-8c9a-7b9dbd5fe972",
+                    "url": "https://sapit-sales-dev-camel.authentication.eu10.hana.ondemand.com",
+                    "uaadomain": "authentication.eu10.hana.ondemand.com",
+                    "verificationkey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlMJSP+wFqjYBcIcXzNaP\n5UULVUG85ZI0vaSbWdlMCWNpf5ZcJjYXHzY8AE63tcCpuz7ej6aYIK9nUlUkzXe+\nOO+AN+DILaO/nQOBEU5HY307MpIT0L7c/dvPG/mNA2LxaWEnzIC0qEJvVke8CG4X\nKtqdJgDP4jLNSo32WfoZvpEaBI+m5WAFkHpH/C++4v5HeUXX+9Z0uHzOtGqcBuWv\nsELfH1esE5IUr1RMP/wZW1XzPniJ4fFD0/D3mUwgIc1T030aIw6iQwUiynASxeuk\nALRvk20vbO/wqLCQ4xtHWLT8ihGp+8ExF/aVDx8WiB+8r5/JYa3fn+1WEgS5YKvh\nDwIDAQAB\n-----END PUBLIC KEY-----",
+                    "apiurl": "https://api.authentication.eu10.hana.ondemand.com",
+                    "identityzone": "sapit-sales-dev-camel",
+                    "identityzoneid": "b3736226-8612-4807-9d10-4ae4f33a0381",
+                    "tenantid": "b3736226-8612-4807-9d10-4ae4f33a0381",
+                    "zoneid": "b3736226-8612-4807-9d10-4ae4f33a0381"
+                }
+            }
+        ],
+        "destination": [
+            {
+                "name": "compliance-check-destination",
+                "label": "destination",
+                "tags": [
+                    "destination"
+                ],
+                "credentials": {
+                    "tenantmode": "dedicated",
+                    "token-type": [
+                        "xsuaa",
+                        "ias"
+                    ],
+                    "clientid": "sb-clonea49d541bf71a48fd8442403853f5a631!b192469|destination-xsappname!b404",
+                    "credential-type": "binding-secret",
+                    "xsappname": "clonea49d541bf71a48fd8442403853f5a631!b192469|destination-xsappname!b404",
+                    "clientsecret": "bb028f39-bfbc-4364-9f91-6c03a9074c57$1U7uzsob3-nk1eZfBwn-Xn24d0Y4bOiLSdKsJ8q6L2o=",
+                    "uri": "https://destination-configuration.cfapps.eu10.hana.ondemand.com",
+                    "url": "https://sapit-sales-dev-camel.authentication.eu10.hana.ondemand.com",
+                    "uaadomain": "authentication.eu10.hana.ondemand.com",
+                    "instanceid": "a49d541b-f71a-48fd-8442-403853f5a631",
+                    "verificationkey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlMJSP+wFqjYBcIcXzNaP\n5UULVUG85ZI0vaSbWdlMCWNpf5ZcJjYXHzY8AE63tcCpuz7ej6aYIK9nUlUkzXe+\nOO+AN+DILaO/nQOBEU5HY307MpIT0L7c/dvPG/mNA2LxaWEnzIC0qEJvVke8CG4X\nKtqdJgDP4jLNSo32WfoZvpEaBI+m5WAFkHpH/C++4v5HeUXX+9Z0uHzOtGqcBuWv\nsELfH1esE5IUr1RMP/wZW1XzPniJ4fFD0/D3mUwgIc1T030aIw6iQwUiynASxeuk\nALRvk20vbO/wqLCQ4xtHWLT8ihGp+8ExF/aVDx8WiB+8r5/JYa3fn+1WEgS5YKvh\nDwIDAQAB\n-----END PUBLIC KEY-----",
+                    "identityzone": "sapit-sales-dev-camel",
+                    "tenantid": "b3736226-8612-4807-9d10-4ae4f33a0381"
+                }
+            }
+        ]
+    }
+}

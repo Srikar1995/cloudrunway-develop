@@ -1,0 +1,52 @@
+{
+  "welcomeFile": "/index.html",
+  "authenticationMethod": "route",
+  "routes": [
+    {
+      "source": "^/index.html",
+      "service": "html5-apps-repo-rt",
+      "cacheControl": "no-cache, no-store, must-revalidate",
+      "scope": ["$XSAPPNAME.display-termination"]
+    },
+    {
+      "source": "^/ui5appwz.html",
+      "service": "html5-apps-repo-rt",
+      "cacheControl": "no-cache, no-store, must-revalidate",
+      "scope": ["$XSAPPNAME.display-termination"]
+    },
+    {
+      "source": "^/sapsalesservicecloudv2(.*)$",
+      "destination": "ext_sales_cloud",
+      "target": "$1",
+      "csrfProtection": false,
+      "scope": ["$XSAPPNAME.display-termination"]
+    },
+    {
+      "source": "^/terminationbackend(.*)$",
+      "destination": "terminationbackend",
+      "target": "$1",
+      "csrfProtection": false,
+      "scope": ["$XSAPPNAME.display-termination"]
+    },
+    {
+      "source": "^/sap-ui-cachebuster-info.json(.*)$",
+      "target": "/sap-ui-cachebuster-info.json$1",
+      "service": "html5-apps-repo-rt",
+      "cacheControl": "no-cache, no-store, must-revalidate",
+      "scope": ["$XSAPPNAME.display-termination"]
+    },
+    {
+      "source": "^(.*)$",
+      "target": "$1",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa",
+      "scope": ["$XSAPPNAME.display-termination"]
+    }
+  ],
+  "responseHeaders": [
+      {
+        "name": "Content-Security-Policy",
+        "value": "frame-ancestors 'self' *.outreach.io *.cfapps.eu10.hana.ondemand.com *.hana.ondemand.com https://intelligent-workplace.analytics.for.sap/ https://*.test.crm.cloud.sap https://*.crm.cloud.sap https://*.vlab.crm.cloud.sap"
+      }
+    ]
+  }

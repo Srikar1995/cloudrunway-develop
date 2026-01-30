@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form" xmlns:layout="sap.ui.layout" xmlns:upload="sap.m.upload" xmlns:ux="sap.uxap" controllerName="cloudrunway.controller.Termination">
+   <Page showHeader="false">
+      <VBox id="vboxMessage" class="sapUiSmallMargin" visible="{= ${terminationModel>/taMessages}.length > 0}">
+         <MessageStrip
+                  text="{= ${terminationModel>/taMessages/0/message}}"
+                  type="{= ${terminationModel>/taMessages/0/type}}"
+                  showIcon="true"
+                  showCloseButton="true">
+         </MessageStrip>
+      </VBox>
+      <VBox id="vboxTerminationHistory" class="sapUiSmallMargin">
+         <Table width="100%" class="tableRowHeight" items="{path: 'terminationModel>/TerminationsList'}" growing="true" mode="SingleSelectLeft" growingThreshold="10" id="terminationTable" noDataText="{i18n>noTerminationsText}">
+            <headerToolbar>
+               <OverflowToolbar design="Solid">
+                  <Title text="{i18n>terminationHistory}"/>
+                  <ToolbarSpacer />
+                  <Button icon="sap-icon://add" text="{i18n>createTermination}" press=".CreateDialog.openCreateTermination" type="Ghost" visible="{path: 'terminationModel>/TerminationsList', formatter: '.formatter.getCreateVisible'}"/>
+               </OverflowToolbar>
+            </headerToolbar>
+            <columns>
+               <!-- <Column hAlign="Begin" vAlign="Middle" mergeDuplicates="false">
+                  <Text text="ID" />
+               </Column> -->
+               <Column hAlign="Begin" vAlign="Middle" mergeDuplicates="false">
+                  <Text text="{i18n>status}" />
+               </Column>
+               <Column hAlign="Begin" vAlign="Middle" mergeDuplicates="false" minScreenWidth="100px">
+                  <Text text="{i18n>retractionReason}" />
+               </Column>
+               <Column hAlign="Begin" vAlign="Middle" popinDisplay="Inline" demandPopin="true" minScreenWidth="560px" mergeDuplicates="false">
+                  <Text text="{i18n>termResponsible}" />
+               </Column>
+               <Column hAlign="Begin" vAlign="Middle" popinDisplay="Inline" demandPopin="true" minScreenWidth="560px" mergeDuplicates="false">
+                  <Text text="{i18n>termCreatedBy}" />
+               </Column>
+               <Column hAlign="Begin" vAlign="Middle" popinDisplay="Inline" demandPopin="true" minScreenWidth="560px" mergeDuplicates="false">
+                  <Text text="{i18n>creationDate}" />
+               </Column>
+               <Column hAlign="Begin" vAlign="Middle" popinDisplay="Inline" demandPopin="true" minScreenWidth="560px" mergeDuplicates="false">
+                  <Text text="{i18n>changeDate}" />
+               </Column>
+               <Column hAlign="Begin" vAlign="Middle" popinDisplay="Inline" demandPopin="true" minScreenWidth="560px" mergeDuplicates="false">
+                  <Text text="{i18n>icertisId}" />
+               </Column>
+            </columns>
+            <items>
+               <ColumnListItem type="Active" press="onTerminationSelect" selected="{= ${terminationModel>ID} === ${terminationModel>/activeTermination/ID}}">
+                  <!-- <Text text="{terminationModel>ID}" /> -->
+                  <VBox width="100%">
+                  <ObjectStatus class="customFullWidthStatus" text="{parts: [{path: 'terminationModel>/TerminationStatusList'}, {path: 'terminationModel>status'}], formatter:'.formatter.getValueDescr'}" inverted="true" state="{parts: [{path: 'terminationModel>status'}], formatter: '.formatter.getTAStatusState'}" />
+                  </VBox>
+                  <Text text="{parts: [{path: 'terminationModel>/TerminationRetractionReasons'}, {path: 'terminationModel>retractionReason'}], formatter:'.formatter.getValueDescr'}"/>
+                  <Text text="{path:'terminationModel>terminationResponsible'}" />
+                  <Text text="{terminationModel>createdBy}" />
+                  <Text text="{= ${terminationModel>createdAt}.split('T')[0] }" />
+                  <Text text="{= ${terminationModel>modifiedAt}.split('T')[0] }" />
+                  <Text text="{terminationModel>icertisCaseNo}" />
+               </ColumnListItem>
+            </items>
+         </Table>
+      </VBox>
+      <VBox id="vboxUpdateMessage" class="sapUiSmallMargin" visible="{= ${terminationModel>/taUpdateMessages}.length > 0}">
+         <MessageStrip
+                  text="{= ${terminationModel>/taUpdateMessages/0/message}}"
+                  type="{= ${terminationModel>/taUpdateMessages/0/type}}"
+                  showIcon="true"
+                  showCloseButton="true">
+         </MessageStrip>
+      </VBox>
+      <VBox id="vboxTerminationDetailsMain" class="sapUiSmallMargin sapUiSmallMarginTop" visible="{= !!${terminationModel>/activeTermination/ID}}">
+         <Panel class="sapUiNoContentPadding">
+            <core:Fragment fragmentName="cloudrunway.view.fragments.TerminationForm" type="XML" />
+         </Panel>
+      </VBox>
+      <VBox id="vboxTerminationAttachmentsMain" class="sapUiSmallMargin sapUiSmallMarginTop" visible="{= !!${terminationModel>/activeTermination/ID}}">
+         <Panel class="sapUiNoContentPadding">
+            <OverflowToolbar design="Solid" class="sapMListHdr sapMTBHeader-CTX">
+               <Title text="{i18n>displayAttachments}" level="H2" />
+               <ToolbarSpacer />
+               <Button id="uploadButton" text="Upload" press="onUpload" type="Ghost" visible="{= ${terminationModel&gt;/activeTerminationEditMode}}"/>
+            </OverflowToolbar>
+            <List items="{terminationModel>/AttachmentsList}">
+               <CustomListItem>
+                     <HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMargin">
+                        <HBox alignItems="Center">
+                           <core:Icon src="sap-icon://pdf-attachment" size="2rem" color="#D73027" class="sapUiSmallMarginEnd" />
+                           <VBox>
+                              <Link text="{terminationModel>filename}" press="onDownload" class="sapUiTinyMarginBottom" />
+                              <HBox>
+                                 <Text text="{i18n>uploadedBy}" class="sapUiContentLabelColor" renderWhitespace="true" />
+                                 <Text text=" {terminationModel>createdBy}" class="sapUiContentLabelColor" renderWhitespace="true" />
+                                 <Text text="{i18n>uploadedOn}" class="sapUiContentLabelColor" renderWhitespace="true" />
+                                 <Text text="{parts: [{path: 'terminationModel>createdAt'}], formatter: '.formatter.formatDate'}" class="sapUiContentLabelColor" renderWhitespace="true" />
+                              </HBox>
+                           </VBox>
+                        </HBox>
+                        <HBox>
+                           <Button icon="sap-icon://delete" type="Ghost" press="onDeleteAttachment" tooltip="Delete" visible="{= ${terminationModel&gt;/activeTerminationEditMode}}" />
+                        </HBox>
+                     </HBox>
+               </CustomListItem>
+            </List>
+         </Panel>
+      </VBox>
+   </Page>
+</mvc:View>

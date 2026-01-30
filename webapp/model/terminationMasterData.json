@@ -1,0 +1,59 @@
+{
+    "ScenarioTypeList": [
+      {
+        "key": "CustomerPartnerInitiatedFullTermination",
+        "text": "Customer Partner Initiated Full Termination"
+      },
+      {
+        "key": "EUDataAct",
+        "text": "EU Data Act"
+      },
+      {
+        "key": "SAPInitiatedFullTermination",
+        "text": "SAP Initiated Full Termination"
+      }
+    ],
+    "TerminationOriginList": [
+      {
+        "key": "CustomerInitiated",
+        "text": "Customer Initiated"
+      },
+      {
+        "key": "SapInitiatedNonPayment",
+        "text": "SAP Initiated - Non Payment"
+      },
+      {
+        "key": "SapInitiatedOthers",
+        "text": "SAP Initiated - Others"
+      },
+      {
+        "key": "AutoExpiration",
+        "text": "Auto Expiration"
+      }
+    ],
+    "TerminationStatusList": [
+      {
+        "key": "InProcess",
+        "text": "In Process"
+      },
+      {
+        "key": "Retracted",
+        "text": "Retracted"
+      },
+      {
+        "key": "Completed",
+        "text": "Completed"
+      }
+    ],
+    "TerminationRetractionReasons": [
+      {
+        "key": "TerminationCreatedInError",
+        "text": "Termination created in error"
+      },
+      {
+        "key": "CustomerWillRenew",
+        "text": "Customer will renew"
+      }
+    ]
+  }
+  

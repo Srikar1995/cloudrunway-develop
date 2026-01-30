@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://sap.github.io/ui5-tooling/schema/ui5.yaml.json
+# ------------------------------------------------------------------------------
+# Project      : CloudRunway Termination UI5 Application
+# File         : ui5-local.yaml
+# Description  : Local UI5 development configuration for running the Fiori app
+#                with live reload, backend proxy, and preview tooling.
+#
+# Author       : Showkath Naseem (I311690)
+# Department   : SAP IT – Sales Technology
+# Created On   : 15/11/2025
+#
+# Note         : Do NOT modify destination names, routing paths, or middleware
+#                order unless required for deployment changes.
+# ----------------
+
+specVersion: "3.1"
+
+metadata:
+  name: cloudrunway
+
+type: application
+
+framework:
+  name: SAPUI5
+  version: 1.142.0
+  libraries:
+    - name: sap.m
+    - name: sap.ui.core
+    - name: sap.ushell
+    - name: themelib_sap_horizon
+
+server:
+  customMiddleware:
+    # Live-reload for local development
+    - name: fiori-tools-appreload
+      afterMiddleware: compression
+      configuration:
+        port: 35729
+        path: webapp
+        delay: 300
+
+    # Backend proxy to Sales Cloud service (OData V4)
+    - name: fiori-tools-proxy
+      afterMiddleware: compression
+      configuration:
+        ignoreCertError: false
+        backend:
+          - path: /terminationbackend
+            destination: terminationbackend
+            pathPrefix: /
+
+    # Fiori preview runner
+    - name: fiori-tools-preview
+      afterMiddleware: fiori-tools-appreload
+      configuration:
+        component: cloudrunway
+        ui5Theme: sap_horizon  # UI5 Horizon theme
