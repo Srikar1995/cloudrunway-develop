@@ -80,14 +80,21 @@
                <ToolbarSpacer />
                <Button id="uploadButton" text="Upload" press="onUpload" type="Ghost" visible="{= ${terminationModel&gt;/activeTerminationEditMode}}"/>
             </OverflowToolbar>
-            <List items="{terminationModel>/AttachmentsList}">
+            <List items="{terminationModel>/mergedAttachmentsList}">
                <CustomListItem>
                      <HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMargin">
                         <HBox alignItems="Center">
                            <core:Icon src="sap-icon://pdf-attachment" size="2rem" color="#D73027" class="sapUiSmallMarginEnd" />
                            <VBox>
-                              <Link text="{terminationModel>filename}" press="onDownload" class="sapUiTinyMarginBottom" />
-                              <HBox>
+                              <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+                                 <Link text="{terminationModel>filename}" press="onDownload" />
+                                 <ObjectStatus 
+                                    text="pending" 
+                                    state="Warning" 
+                                    visible="{= ${terminationModel>isPending} === true}"
+                                    class="sapUiTinyMarginBegin" />
+                              </HBox>
+                              <HBox visible="{= ${terminationModel>isPending} !== true}">
                                  <Text text="{i18n>uploadedBy}" class="sapUiContentLabelColor" renderWhitespace="true" />
                                  <Text text=" {terminationModel>createdBy}" class="sapUiContentLabelColor" renderWhitespace="true" />
                                  <Text text="{i18n>uploadedOn}" class="sapUiContentLabelColor" renderWhitespace="true" />
