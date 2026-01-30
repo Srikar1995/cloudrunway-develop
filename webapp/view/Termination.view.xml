@@ -78,7 +78,7 @@
             <OverflowToolbar design="Solid" class="sapMListHdr sapMTBHeader-CTX">
                <Title text="{i18n>displayAttachments}" level="H2" />
                <ToolbarSpacer />
-               <Button id="uploadButton" text="Upload" press="onUpload" type="Ghost" visible="{= ${terminationModel&gt;/activeTerminationEditMode}}"/>
+               <Button id="uploadButton" text="Upload" press="onUpload" type="Ghost" visible="{= ${terminationModel>/activeTerminationEditMode}}"/>
             </OverflowToolbar>
             <List items="{terminationModel>/mergedAttachmentsList}">
                <CustomListItem>
@@ -103,7 +103,7 @@
                            </VBox>
                         </HBox>
                         <HBox>
-                           <Button icon="sap-icon://delete" type="Ghost" press="onDeleteAttachment" tooltip="Delete" visible="{= ${terminationModel&gt;/activeTerminationEditMode}}" />
+                           <Button icon="sap-icon://delete" type="Ghost" press="onDeleteAttachment" tooltip="Delete" visible="{= ${terminationModel>/activeTerminationEditMode}}" />
                         </HBox>
                      </HBox>
                </CustomListItem>
