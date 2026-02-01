@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <Dialog title="{valueHelpModel>/title}" contentWidth="800px" contentHeight="600px" resizable="true">
+    <content>
+      <VBox class="sapUiSmallMargin">
+        <SearchField
+          width="100%"
+          value="{valueHelpModel>/searchText}"
+          placeholder="{valueHelpModel>/searchPlaceholder}"
+          search="onValueHelpSearch"
+          liveChange="onValueHelpSearchLiveChange"
+          class="sapUiSmallMarginBottom" />
+        <Table
+          items="{valueHelpModel>/results}"
+          mode="SingleSelectLeft"
+          selectionChange="onValueHelpSelectionChange"
+          noDataText="No data available">
+          <headerToolbar>
+            <OverflowToolbar>
+              <Title text="{valueHelpModel>/tableTitle}" level="H2" />
+              <ToolbarSpacer />
+              <Text text="{valueHelpModel>/resultsCount}" class="sapUiSmallMarginEnd" />
+            </OverflowToolbar>
+          </headerToolbar>
+          <columns>
+            <Column width="40%">
+              <header>
+                <Text text="Name" />
+              </header>
+            </Column>
+            <Column width="30%">
+              <header>
+                <Text text="Title" />
+              </header>
+            </Column>
+            <Column width="30%">
+              <header>
+                <Text text="Email" />
+              </header>
+            </Column>
+          </columns>
+          <items>
+            <ColumnListItem type="Active" press="onValueHelpItemPress">
+              <cells>
+                <Text text="{valueHelpModel>formattedName}" tooltip="{valueHelpModel>formattedName}" />
+                <Text
+                  text="{= ${valueHelpModel>functionalTitleName} || ${valueHelpModel>employeeDisplayId} || ''}"
+                  tooltip="{= ${valueHelpModel>functionalTitleName} || ${valueHelpModel>employeeDisplayId} || ''}" />
+                <Text
+                  text="{= ${valueHelpModel>eMail} || ${valueHelpModel>workplaceAddress/eMail} || ''}"
+                  tooltip="{= ${valueHelpModel>eMail} || ${valueHelpModel>workplaceAddress/eMail} || ''}" />
+              </cells>
+            </ColumnListItem>
+          </items>
+        </Table>
+      </VBox>
+    </content>
+    <beginButton>
+      <Button text="OK" type="Emphasized" press="onValueHelpOk" enabled="{valueHelpModel>/hasSelection}" />
+    </beginButton>
+    <endButton>
+      <Button text="Cancel" press="onValueHelpCancel" />
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>

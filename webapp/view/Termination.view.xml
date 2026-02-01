@@ -51,7 +51,7 @@
                   <ObjectStatus class="customFullWidthStatus" text="{parts: [{path: 'terminationModel>/TerminationStatusList'}, {path: 'terminationModel>status'}], formatter:'.formatter.getValueDescr'}" inverted="true" state="{parts: [{path: 'terminationModel>status'}], formatter: '.formatter.getTAStatusState'}" />
                   </VBox>
                   <Text text="{parts: [{path: 'terminationModel>/TerminationRetractionReasons'}, {path: 'terminationModel>retractionReason'}], formatter:'.formatter.getValueDescr'}"/>
-                  <Text text="{path:'terminationModel>terminationResponsible'}" />
+                  <Text text="{parts: [{path: 'terminationModel>terminationResponsible'}, {path: 'terminationModel>terminationResponsibleResolved'}], formatter:'.formatter.resolveEmployeeName'}" tooltip="{parts: [{path: 'terminationModel>terminationResponsible'}, {path: 'terminationModel>terminationResponsibleResolved'}], formatter:'.formatter.resolveEmployeeName'}" />
                   <Text text="{terminationModel>createdBy}" />
                   <Text text="{= ${terminationModel>createdAt}.split('T')[0] }" />
                   <Text text="{= ${terminationModel>modifiedAt}.split('T')[0] }" />

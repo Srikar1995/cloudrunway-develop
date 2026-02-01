@@ -1,4 +1,4 @@
-<core:FragmentDefinition xmlns="sap.m" xmlns:f="sap.ui.layout.form" xmlns:custom="hdm.control" xmlns:core="sap.ui.core" xmlns:layout="sap.ui.layout">
+<core:FragmentDefinition xmlns="sap.m" xmlns:f="sap.ui.layout.form" xmlns:custom="hdm.control" xmlns:core="sap.ui.core" xmlns:layout="sap.ui.layout" xmlns:control="cloudrunway.control">
     <OverflowToolbar design="Solid" class="sapMListHdr sapMTBHeader-CTX">
            <Title text="{i18n>terminationDetails}"/>
            <ToolbarSpacer />
@@ -67,13 +67,40 @@
             <layout:content>
                <VBox height="50px" class="sapUiSmallMarginEnd">
                   <Label text="{i18n>terminationRequestor}" required="true"/>
-                  <Input visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationRequester}" />
-                  <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{terminationModel>/activeTermination/terminationRequester}" />
+                  <control:ValueHelpInput
+                     id="inpTerminationRequesterEdit"
+                     valueHelpType="contactPerson"
+                     value="{terminationModel>/activeTermination/terminationRequester}"
+                     selectedItem="{terminationModel>/activeTermination/requesterObject}"
+                     accountId="{terminationModel>/oppAccountID}"
+                     enabled="{= ${terminationModel>/activeTerminationEditMode}}"
+                     visible="{= ${terminationModel>/activeTerminationEditMode}}"
+                     required="true"
+                     width="100%"
+                     valueSelected="onRequesterSelected"
+                     change="onRequesterChange" />
+                  <Text 
+                     text="{parts: [{path: 'terminationModel>/activeTermination/terminationRequester'}, {path: 'terminationModel>/activeTermination/requesterObject/formattedName'}], formatter: '.formatter.resolveContactPersonName'}"
+                     visible="{= !${terminationModel>/activeTerminationEditMode}}"
+                     width="100%" />
                </VBox>
                <VBox height="50px">
                   <Label text="{i18n>terminationResponsible}" required="true"/>
-                  <Input visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationResponsible}" />
-                  <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{terminationModel>/activeTermination/terminationResponsible}" />
+                  <control:ValueHelpInput
+                     id="inpTerminationResponsibleEdit"
+                     valueHelpType="employee"
+                     value="{terminationModel>/activeTermination/terminationResponsible}"
+                     selectedItem="{terminationModel>/activeTermination/responsibleObject}"
+                     enabled="{= ${terminationModel>/activeTerminationEditMode}}"
+                     visible="{= ${terminationModel>/activeTerminationEditMode}}"
+                     required="true"
+                     width="100%"
+                     valueSelected="onResponsibleSelected"
+                     change="onResponsibleChange" />
+                  <Text 
+                     text="{parts: [{path: 'terminationModel>/activeTermination/terminationResponsible'}, {path: 'terminationModel>/activeTermination/responsibleObject/formattedName'}], formatter: '.formatter.resolveEmployeeName'}"
+                     visible="{= !${terminationModel>/activeTerminationEditMode}}"
+                     width="100%" />
                </VBox>
             </layout:content>
          </layout:Grid>

@@ -1,7 +1,8 @@
 sap.ui.define([
     "sap/m/plugins/UploadSetwithTable",
 	"sap/ui/core/format/DateFormat",
-], function (UploadSetwithTable, DateFormat) {
+	"cloudrunway/control/ValueHelpService",
+], function (UploadSetwithTable, DateFormat, ValueHelpService) {
 	"use strict";
 	return {
         getIconSrc: function(mediaType, fileName) {
@@ -46,6 +47,40 @@ sap.ui.define([
 				return dDateFormat.format(sValue);
 			}
 			return "";
+		},
+		/**
+		 * Resolves employee ID to formatted name
+		 * Note: This formatter uses the resolved name from model (set by controller)
+		 * @param {string} sId - Employee ID
+		 * @param {string} sResolvedName - Resolved name from model
+		 * @returns {string} Formatted name or ID if not resolved
+		 */
+		resolveEmployeeName: function (sId, sResolvedName) {
+			if (sResolvedName) {
+				return sResolvedName;
+			}
+			if (!sId) {
+				return "";
+			}
+			// Return ID as fallback
+			return sId;
+		},
+		/**
+		 * Resolves contact person ID to formatted name
+		 * Note: This formatter uses the resolved name from model (set by controller)
+		 * @param {string} sResolvedName - Resolved name from model
+		 * @param {string} sId - Contact person ID
+		 * @returns {string} Formatted name or ID if not resolved
+		 */
+		resolveContactPersonName: function (sId, sResolvedName) {
+			if (sResolvedName) {
+				return sResolvedName;
+			}
+			if (!sId) {
+				return "";
+			}
+			// Return ID as fallback
+			return sId;
 		}
     };
 });

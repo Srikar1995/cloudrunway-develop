@@ -8,6 +8,7 @@ sap.ui.define(
     "cloudrunway/model/Formatter",
     "cloudrunway/controller/CreateDialog",
     "cloudrunway/model/Common",
+    "cloudrunway/control/ValueHelpService",
   ],
   function (
     Controller,
@@ -18,17 +19,10 @@ sap.ui.define(
     formatter,
     CreateDialog,
     Common,
+    ValueHelpService,
   ) {
     "use strict";
-    /**
-     * Main  Termination controller for Termination Web UI
-     * @description
-     * PoC -> This controller handles all functionality related to cloud runway termination processing,
-     * including form binding, submission, validation, and attachment uploads.
-     * @authors Showkath Naseem [I311690],
-     * @version 1.0
-     * @since 2025-10-21
-     */
+    
     return Controller.extend("cloudrunway.controller.Termination", {
       formatter: formatter,
       CreateDialog: CreateDialog,
@@ -116,7 +110,8 @@ sap.ui.define(
           pendingAttachments: [],
           deletedAttachmentIds: [],
           originalAttachmentsList: [],
-          mergedAttachmentsList: []
+          mergedAttachmentsList: [],
+          originalActiveTermination: null
         });
         oView.setModel(oTerminationModel, "terminationModel");
       },
@@ -223,19 +218,60 @@ sap.ui.define(
         oListBinding
           .requestContexts()
           .then(
-            function (aContexts) {
+            async function (aContexts) {
               const aResults = aContexts.map((oCtx) => oCtx.getObject());
               if (aResults?.length) {
                 const sortedResults = aResults.sort((a, b) => {
                   return new Date(b.modifiedAt) - new Date(a.modifiedAt);
                 });
+                
+                // Resolve IDs to names for display in table
+                for (const oTermination of sortedResults) {
+                  if (oTermination.terminationResponsible) {
+                    try {
+                      const oEmployee = await ValueHelpService.resolveEmployeeById(oTermination.terminationResponsible);
+                      if (oEmployee && oEmployee.formattedName) {
+                        oTermination.terminationResponsibleResolved = oEmployee.formattedName;
+                      }
+                    } catch (oError) {
+                      console.error("Error resolving employee:", oError);
+                    }
+                  }
+                }
+                
                 oTerminationModel.setProperty(
                   "/TerminationsList",
                   sortedResults,
                 );
-                oTerminationModel.setProperty("/activeTermination", {
-                  ...aResults[0],
-                });
+                
+                const oActiveTermination = { ...aResults[0] };
+                // Resolve IDs for active termination display
+                if (oActiveTermination.terminationRequester) {
+                  try {
+                    const oContact = await ValueHelpService.resolveContactPersonById(
+                      oActiveTermination.terminationRequester,
+                      oTerminationModel.getProperty("/oppAccountID")
+                    );
+                    if (oContact) {
+                      oActiveTermination.requesterObject = oContact;
+                    }
+                  } catch (oError) {
+                    console.error("Error resolving contact person:", oError);
+                  }
+                }
+                if (oActiveTermination.terminationResponsible) {
+                  try {
+                    const oEmployee = await ValueHelpService.resolveEmployeeById(oActiveTermination.terminationResponsible);
+                    if (oEmployee) {
+                      oActiveTermination.responsibleObject = oEmployee;
+                      oActiveTermination.terminationResponsibleResolved = oEmployee.formattedName;
+                    }
+                  } catch (oError) {
+                    console.error("Error resolving employee:", oError);
+                  }
+                }
+                
+                oTerminationModel.setProperty("/activeTermination", oActiveTermination);
                 that._readAttachments(aResults[0]);
               }
               oTerminationModel.setProperty(
@@ -248,23 +284,56 @@ sap.ui.define(
             console.error("No Terminations found");
           });
       },
-      onTerminationSelect: function (oEvent) {
+      onTerminationSelect: async function (oEvent) {
         const oTerminationModel = this.getView().getModel("terminationModel");
         const selectedItem = oEvent
           .getSource()
           .getBindingContext("terminationModel")
           .getObject();
-        oTerminationModel.setProperty("/activeTermination", {
-          ...selectedItem,
-        });
+        
+        const oActiveTermination = { ...selectedItem };
+        
+        // Resolve IDs to objects for display
+        if (oActiveTermination.terminationRequester) {
+          try {
+            const oContact = await ValueHelpService.resolveContactPersonById(
+              oActiveTermination.terminationRequester,
+              oTerminationModel.getProperty("/oppAccountID")
+            );
+            if (oContact) {
+              oActiveTermination.requesterObject = oContact;
+            }
+          } catch (oError) {
+            console.error("Error resolving contact person:", oError);
+          }
+        }
+        if (oActiveTermination.terminationResponsible) {
+          try {
+            const oEmployee = await ValueHelpService.resolveEmployeeById(oActiveTermination.terminationResponsible);
+            if (oEmployee) {
+              oActiveTermination.responsibleObject = oEmployee;
+            }
+          } catch (oError) {
+            console.error("Error resolving employee:", oError);
+          }
+        }
+        
+        oTerminationModel.setProperty("/activeTermination", oActiveTermination);
         // Clear any pending state when selecting a different termination
         oTerminationModel.setProperty("/pendingAttachments", []);
         oTerminationModel.setProperty("/deletedAttachmentIds", []);
+        // Clear original termination data
+        oTerminationModel.setProperty("/originalActiveTermination", null);
         this._readAttachments(selectedItem);
         oTerminationModel.setProperty("/activeTerminationEditMode", false);
       },
       onTerminationEdit: function (oEvent) {
         const oTerminationModel = this.getView().getModel("terminationModel");
+        const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
+        
+        // Store original termination data for cancel functionality
+        const oOriginalTermination = JSON.parse(JSON.stringify(oActiveTermination));
+        oTerminationModel.setProperty("/originalActiveTermination", oOriginalTermination);
         
         // Create snapshot of current attachments list
         const aCurrentAttachments = oTerminationModel.getProperty("/AttachmentsList") || [];
@@ -283,6 +352,12 @@ sap.ui.define(
         const oTerminationModel = this.getView().getModel("terminationModel");
         const oODataModel = this.getView().getModel("terminationModelV4");
         
+        // Restore original termination data
+        const oOriginalTermination = oTerminationModel.getProperty("/originalActiveTermination");
+        if (oOriginalTermination) {
+          oTerminationModel.setProperty("/activeTermination", JSON.parse(JSON.stringify(oOriginalTermination)));
+        }
+        
         // Restore original attachments list
         const aOriginalAttachments = oTerminationModel.getProperty("/originalAttachmentsList") || [];
         oTerminationModel.setProperty("/AttachmentsList", JSON.parse(JSON.stringify(aOriginalAttachments)));
@@ -290,6 +365,9 @@ sap.ui.define(
         // Clear pending state
         oTerminationModel.setProperty("/pendingAttachments", []);
         oTerminationModel.setProperty("/deletedAttachmentIds", []);
+        
+        // Clear original termination data
+        oTerminationModel.setProperty("/originalActiveTermination", null);
         
         // Update merged list
         this._getMergedAttachmentsList();
@@ -303,6 +381,38 @@ sap.ui.define(
         this._clearMessages();
         const updatedData = oTerminationModel.getProperty("/activeTermination");
         const oODataModel = this.getView().getModel("terminationModelV4");
+
+        // Check for attachment validation when status or date changes
+        const oOriginalTermination = oTerminationModel.getProperty("/originalActiveTermination");
+        const oOriginalStatus = oOriginalTermination ? oOriginalTermination.status : null;
+        const oOriginalEffectiveDate = oOriginalTermination ? oOriginalTermination.terminationEffectiveDate : null;
+        const aMergedAttachments = oTerminationModel.getProperty("/mergedAttachmentsList") || [];
+        const bHasAttachments = aMergedAttachments.length > 0;
+
+        // Check if status changed to Retracted
+        const bStatusChangedToRetracted = 
+          updatedData.status === "Retracted" && 
+          oOriginalStatus !== "Retracted" && 
+          !bHasAttachments;
+
+        // Check if effective date changed
+        const bEffectiveDateChanged = 
+          updatedData.terminationEffectiveDate !== oOriginalEffectiveDate && 
+          !bHasAttachments;
+
+        if (bStatusChangedToRetracted) {
+          oTerminationModel.setProperty("/taUpdateMessages", [
+            { message: Common.getLocalTextByi18nValue("MISSINGRETRACTIONATTACHMENT"), type: "Error" }
+          ]);
+          return;
+        }
+
+        if (bEffectiveDateChanged) {
+          oTerminationModel.setProperty("/taUpdateMessages", [
+            { message: Common.getLocalTextByi18nValue("MISSINGSWITCHINGPERIODATTACHMENT"), type: "Error" }
+          ]);
+          return;
+        }
 
         const isMandatoryFieldsEmpty =
           !updatedData.status ||
@@ -363,7 +473,24 @@ sap.ui.define(
             }
           }
 
-          // Step 3: Save form data
+          // Step 3: Extract IDs from objects if they exist
+          let sRequesterId = updatedData.terminationRequester;
+          let sResponsibleId = updatedData.terminationResponsible;
+          
+          // If we have objects stored, extract IDs from them
+          if (updatedData.requesterObject && updatedData.requesterObject.id) {
+            sRequesterId = updatedData.requesterObject.id;
+          } else if (typeof updatedData.terminationRequester === "object" && updatedData.terminationRequester.id) {
+            sRequesterId = updatedData.terminationRequester.id;
+          }
+          
+          if (updatedData.responsibleObject && updatedData.responsibleObject.id) {
+            sResponsibleId = updatedData.responsibleObject.id;
+          } else if (typeof updatedData.terminationResponsible === "object" && updatedData.terminationResponsible.id) {
+            sResponsibleId = updatedData.terminationResponsible.id;
+          }
+
+          // Step 4: Save form data
           const oContextBinding = oODataModel.bindContext(
             `/TerminationRequests(ID='${updatedData.ID}')`,
             undefined,
@@ -372,14 +499,8 @@ sap.ui.define(
           const oCtx = oContextBinding.getBoundContext();
           oCtx.setProperty("status", updatedData.status);
           oCtx.setProperty("terminationOrigin", updatedData.terminationOrigin);
-          oCtx.setProperty(
-            "terminationRequester",
-            updatedData.terminationRequester
-          );
-          oCtx.setProperty(
-            "terminationResponsible",
-            updatedData.terminationResponsible
-          );
+          oCtx.setProperty("terminationRequester", sRequesterId);
+          oCtx.setProperty("terminationResponsible", sResponsibleId);
           oCtx.setProperty(
             "terminationReceiptDate",
             updatedData.terminationReceiptDate
@@ -398,11 +519,11 @@ sap.ui.define(
           
           await oODataModel.submitBatch("TerminationUpdateGroup");
           
-          // Step 4: Clear pending attachments and deleted IDs
+          // Step 5: Clear pending attachments and deleted IDs
           oTerminationModel.setProperty("/pendingAttachments", []);
           oTerminationModel.setProperty("/deletedAttachmentIds", []);
           
-          // Step 5: Refresh attachments from DB
+          // Step 6: Refresh attachments from DB
           const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
           await this._readAttachments(oActiveTermination);
           
@@ -1007,30 +1128,46 @@ sap.ui.define(
           });
         }
       },
+      // ===== ValueHelpInput Event Handlers =====
       onRequesterSelected: function (oEvent) {
         const oSelectedItem = oEvent.getParameter("selectedItem");
-        const oContext = oSelectedItem.getBindingContext("valueHelpModel");
-        if (oContext) {
-          const oData = oContext.getObject();
-          const oInput = oEvent.getSource();
-          // Value is automatically set to formattedName, but we can store additional data if needed
-          // For example, store the ID in a hidden field or data property
-          if (oData.id || oData.displayId) {
-            oInput.data("selectedId", oData.id || oData.displayId);
-          }
+        const oControl = oEvent.getSource();
+        const oView = this.getView();
+        const oTerminationModel = oView.getModel("terminationModel");
+
+        // Check if we're in create dialog or edit mode
+        if (oTerminationModel.getProperty("/createOpen")) {
+          const oCreateModel = this._pDialog.getModel("createModel");
+          oCreateModel.setProperty("/requestor", oSelectedItem);
+        } else {
+          // Edit mode - store object for later ID extraction
+          const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
+          oActiveTermination.requesterObject = oSelectedItem;
+          oTerminationModel.setProperty("/activeTermination", oActiveTermination);
         }
+      },
+      onRequesterChange: function (oEvent) {
+        // Handle change event if needed
       },
       onResponsibleSelected: function (oEvent) {
         const oSelectedItem = oEvent.getParameter("selectedItem");
-        const oContext = oSelectedItem.getBindingContext("valueHelpModel");
-        if (oContext) {
-          const oData = oContext.getObject();
-          const oInput = oEvent.getSource();
-          // Value is automatically set to formattedName, but we can store additional data if needed
-          if (oData.id || oData.displayId || oData.employeeDisplayId) {
-            oInput.data("selectedId", oData.id || oData.displayId || oData.employeeDisplayId);
-          }
+        const oControl = oEvent.getSource();
+        const oView = this.getView();
+        const oTerminationModel = oView.getModel("terminationModel");
+
+        // Check if we're in create dialog or edit mode
+        if (oTerminationModel.getProperty("/createOpen")) {
+          const oCreateModel = this._pDialog.getModel("createModel");
+          oCreateModel.setProperty("/responsible", oSelectedItem);
+        } else {
+          // Edit mode - store object for later ID extraction
+          const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
+          oActiveTermination.responsibleObject = oSelectedItem;
+          oTerminationModel.setProperty("/activeTermination", oActiveTermination);
         }
+      },
+      onResponsibleChange: function (oEvent) {
+        // Handle change event if needed
       },
       _onSelectRequester: function (oEvent) {
         const oView = this.getView();
@@ -1067,19 +1204,9 @@ sap.ui.define(
         try {
           let sUrl = "/sapsalesservicecloudv2/contact-person-service/contactPersons?$top=200";
           
-          // Add accountid filter if available (from context, not user input)
+          // Add accountid filter if available (only eq operator works)
           if (sAccountId) {
             sUrl += `&$filter=accountId eq '${sAccountId}'`;
-          }
-          
-          // Add search filter if provided
-          if (sSearch) {
-            const sSearchFilter = `(contains(formattedName,'${sSearch}') or contains(eMail,'${sSearch}'))`;
-            if (sAccountId) {
-              sUrl += ` and ${sSearchFilter}`;
-            } else {
-              sUrl += `&$filter=${sSearchFilter}`;
-            }
           }
           
           const res = await fetch(sUrl, {
@@ -1096,7 +1223,14 @@ sap.ui.define(
           
           const oData = await res.json();
           // Handle both array and object with results property
-          return Array.isArray(oData) ? oData : (oData.value || oData.results || []);
+          let aResults = Array.isArray(oData) ? oData : (oData.value || oData.results || []);
+          
+          // Apply client-side filtering if search term provided
+          if (sSearch) {
+            aResults = this._filterValueHelpResults(aResults, sSearch);
+          }
+          
+          return aResults;
         } catch (err) {
           console.error("Error fetching contact persons:", err);
           throw err;
@@ -1104,12 +1238,7 @@ sap.ui.define(
       },
       _fetchEmployees: async function (sSearch) {
         try {
-          let sUrl = "/sapsalesservicecloudv2/employee-service/employees";
-          
-          // Add search filter if provided
-          if (sSearch) {
-            sUrl += `?$filter=(contains(formattedName,'${sSearch}') or contains(eMail,'${sSearch}'))`;
-          }
+          const sUrl = "/sapsalesservicecloudv2/employee-service/employees";
           
           const res = await fetch(sUrl, {
             method: "GET",
@@ -1125,11 +1254,38 @@ sap.ui.define(
           
           const oData = await res.json();
           // Handle both array and object with results property
-          return Array.isArray(oData) ? oData : (oData.value || oData.results || []);
+          let aResults = Array.isArray(oData) ? oData : (oData.value || oData.results || []);
+          
+          // Apply client-side filtering if search term provided
+          if (sSearch) {
+            aResults = this._filterValueHelpResults(aResults, sSearch);
+          }
+          
+          return aResults;
         } catch (err) {
           console.error("Error fetching employees:", err);
           throw err;
         }
+      },
+
+      /**
+       * Filters value help results client-side based on search term
+       * @param {Array} aResults - Array of results to filter
+       * @param {string} sSearch - Search term
+       * @returns {Array} Filtered array
+       * @private
+       */
+      _filterValueHelpResults: function (aResults, sSearch) {
+        if (!sSearch || !aResults || aResults.length === 0) {
+          return aResults;
+        }
+
+        const sSearchLower = sSearch.toLowerCase();
+        return aResults.filter(function (oItem) {
+          const sName = (oItem.formattedName || "").toLowerCase();
+          const sEmail = (oItem.eMail || oItem.workplaceAddress?.eMail || "").toLowerCase();
+          return sName.includes(sSearchLower) || sEmail.includes(sSearchLower);
+        });
       },
     });
   }
