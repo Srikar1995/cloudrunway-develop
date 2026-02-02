@@ -65,9 +65,7 @@ sap.ui.define(
             const oActiveTAValidation = oResult.validationResults.find((obj) => obj.checkName === "ActiveTerminationCheck");
             oTerminationModel.setProperty("/preValidationData", oResult);
             this._readOppData();
-            if (!oActiveTAValidation.passed) {
-              this._readTerminations();
-            }
+            this._readTerminations();
           })
           .catch((oError) => {
             oTerminationModel.setProperty("/taMessages", [

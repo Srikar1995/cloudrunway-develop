@@ -95,7 +95,7 @@
                                     class="sapUiTinyMarginBegin" />
                               </HBox>
                               <HBox visible="{= ${terminationModel>isPending} !== true}">
-                                 <Text text="{i18n>uploadedBy}" class="sapUiContentLabelColor" renderWhitespace="true" />
+                                 <Text text="{i18n>uploadedBy}" class="sapUiContentLabelColor sapUiSmallMarginBegin" renderWhitespace="true" />
                                  <Text text=" {terminationModel>createdBy}" class="sapUiContentLabelColor" renderWhitespace="true" />
                                  <Text text="{i18n>uploadedOn}" class="sapUiContentLabelColor" renderWhitespace="true" />
                                  <Text text="{parts: [{path: 'terminationModel>createdAt'}], formatter: '.formatter.formatDate'}" class="sapUiContentLabelColor" renderWhitespace="true" />
