@@ -154,13 +154,14 @@ sap.ui.define(
         });
       },
       _readOppData: function () {
+        const that = this;
         const oTerminationModel = this.getView().getModel("terminationModel");
         const sOppId = oTerminationModel.getProperty("/OpportunityID");
-        const sExtension =
+        const sOppReadUrl =
           sap.ui.require.toUrl("cloudrunway") +
           `/sapsalesservicecloudv2/opportunity-service/opportunities?$top=10&$filter=displayId eq '${sOppId}'`;
         $.ajax({
-          url: sExtension,
+          url: sOppReadUrl,
           method: "GET",
           contentType: "application/json",
           success: function (oResult) {
@@ -170,6 +171,8 @@ sap.ui.define(
               oTerminationModel.setProperty("/oppRenewalRiskReason", oData.extensions?.Z_RenewalRiskReason);
               oTerminationModel.setProperty("/oppBusinessScenario", oData.extensions?.Z_BusinessScenario);
               oTerminationModel.setProperty("/oppAccountID", oData.account?.id);
+              oTerminationModel.setProperty("/contractEndDate", oData.extensions?.Z_QuoteContractEndDate);
+              // that._fetchContractDetails(oData.extensions?.Z_ContractDocId);
             } else {
               oTerminationModel.setProperty("/taMessages", [
                 {
@@ -183,6 +186,38 @@ sap.ui.define(
             oTerminationModel.setProperty("/taMessages", [
               {
                 message: Common.getLocalTextByi18nValue("OPPERROR"),
+                type: "Error",
+              },
+            ]);
+          },
+        });
+      },
+      _fetchContractDetails: function (sContractID) {
+        const oTerminationModel = this.getView().getModel("terminationModel");
+        const sContractReadUrl =
+          sap.ui.require.toUrl("cloudrunway") +
+          `/sapsalesservicecloudv2/subscription-contract-service/subscriptionContractDocuments?$top=10&$filter=externalId.displayId eq '${sContractID}'`;
+        $.ajax({
+          url: sContractReadUrl,
+          method: "GET",
+          contentType: "application/json",
+          success: function (oResult) {
+            if (oResult?.value?.length) {
+              const oData = oResult?.value[0];
+              oTerminationModel.setProperty("/contractEndDate", oData.items[oData.items.length - 1].endDate);
+            } else {
+              oTerminationModel.setProperty("/taMessages", [
+                {
+                  message: Common.getLocalTextByi18nValue("CONTRACTNOTFOUND"),
+                  type: "Error",
+                },
+              ]);
+            }
+          },
+          error: function () {
+            oTerminationModel.setProperty("/taMessages", [
+              {
+                message: Common.getLocalTextByi18nValue("CONTRACTERROR"),
                 type: "Error",
               },
             ]);

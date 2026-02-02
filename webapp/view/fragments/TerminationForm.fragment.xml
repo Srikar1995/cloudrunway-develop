@@ -51,7 +51,7 @@
                         color="#0070f2"
                         tooltip="More info" />
                   </HBox>
-                  <Text text="{terminationModel>/activeTermination/renewalRiskReason}" />
+                  <Text text="{parts: [{path: 'terminationModel>/RenewalRiskReasonList'}, {path: 'terminationModel>/activeTermination/renewalRiskReason'}], formatter:'.formatter.getValueDescr'}" />
                </VBox>
                <VBox class="sapUiSmallMarginEnd" height="50px">
                   <Label text="{i18n>initiatedBy}" />

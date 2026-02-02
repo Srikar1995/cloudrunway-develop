@@ -1,7 +1,8 @@
 sap.ui.define(
   ["sap/ui/model/json/JSONModel",
-    "cloudrunway/model/Common"],
-  function (JSONModel, Common) {
+    "cloudrunway/model/Common",
+    "cloudrunway/model/Formatter"],
+  function (JSONModel, Common, Formatter) {
     "use strict";
     return {
       openCreateTermination: function () {
@@ -23,9 +24,9 @@ sap.ui.define(
               businessScenario: "",
               terminationOrigin: "",
               riskReason: "",
-              requestor: "",
+              requestor: {},
               responsible: {},
-              receiptDate: {},
+              receiptDate: "",
               effectData: "",
               AttachmentsList: [],
               taCreateMessages: [],
@@ -113,11 +114,11 @@ sap.ui.define(
           displayId: "UI5-" + Date.now(),
           source: "BTP-Termination-App",
           terminationOrigin: sTerminationOrigin,
-          businessScenario: sBusinessScenario || "SAPInitiatedFullTermination",
+          businessScenario: sBusinessScenario,
           terminationType: "Standard",
           renewalType: "Auto",
           status: "InProcess",
-          contractEndDate: "2025-12-31",
+          contractEndDate: Formatter.formatDate(oTerminationModel.getProperty("/contractEndDate")),//"2025-12-31"
           terminationEffectiveDate: sTerminationEffectiveDate,
           terminationReceiptDate: sTerminationReceiptDate,
           terminationRequester: sTerminationRequester?.id,
