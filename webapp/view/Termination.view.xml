@@ -52,7 +52,7 @@
                   </VBox>
                   <Text text="{parts: [{path: 'terminationModel>/TerminationRetractionReasons'}, {path: 'terminationModel>retractionReason'}], formatter:'.formatter.getValueDescr'}"/>
                   <Text text="{parts: [{path: 'terminationModel>terminationResponsible'}, {path: 'terminationModel>terminationResponsibleResolved'}], formatter:'.formatter.resolveEmployeeName'}" tooltip="{parts: [{path: 'terminationModel>terminationResponsible'}, {path: 'terminationModel>terminationResponsibleResolved'}], formatter:'.formatter.resolveEmployeeName'}" />
-                  <Text text="{terminationModel>createdBy}" />
+                  <Text text="{parts: [{path: 'terminationModel>createdBy'}, {path: 'terminationModel>createdByResolved'}], formatter:'.formatter.resolveEmployeeName'}" tooltip="{parts: [{path: 'terminationModel>createdBy'}, {path: 'terminationModel>createdByResolved'}], formatter:'.formatter.resolveEmployeeName'}" />
                   <Text text="{= ${terminationModel>createdAt}.split('T')[0] }" />
                   <Text text="{= ${terminationModel>modifiedAt}.split('T')[0] }" />
                   <Text text="{terminationModel>icertisCaseNo}" />

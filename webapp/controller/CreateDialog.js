@@ -121,8 +121,8 @@ sap.ui.define(
           contractEndDate: Formatter.formatDate(oTerminationModel.getProperty("/contractEndDate")),//"2025-12-31"
           terminationEffectiveDate: sTerminationEffectiveDate,
           terminationReceiptDate: sTerminationReceiptDate,
-          terminationRequester: sTerminationRequester?.id,
-          terminationResponsible: sTerminationResponsible?.id,
+          terminationRequester: sTerminationRequester?.defaultExternalContactId,
+          terminationResponsible: sTerminationResponsible?.employeeDisplayId,
           renewalRiskReason: sRenewalRiskReason || null,
           opportunityId: oTerminationModel.getProperty("/OpportunityID"),
           subscriptionContractId: oTerminationModel.getProperty("/subscriptionContractId")

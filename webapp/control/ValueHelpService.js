@@ -24,6 +24,11 @@ sap.ui.define([], function () {
           sUrl += `&$filter=accountId eq '${sAccountId}'`;
         }
 
+        // Add search parameter if provided
+        if (sSearch) {
+          sUrl += `&$search='${sSearch}'`;
+        }
+
         const res = await fetch(sUrl, {
           method: "GET",
           credentials: "include",
@@ -39,11 +44,6 @@ sap.ui.define([], function () {
         const oData = await res.json();
         // Handle both array and object with results property
         let aResults = Array.isArray(oData) ? oData : oData.value || oData.results || [];
-
-        // Apply client-side filtering if search term provided
-        if (sSearch) {
-          aResults = this._filterResults(aResults, sSearch);
-        }
 
         // Cache the results
         aResults.forEach((oItem) => {
@@ -67,7 +67,12 @@ sap.ui.define([], function () {
      */
     fetchEmployees: async function (sSearch) {
       try {
-        const sUrl = "/sapsalesservicecloudv2/employee-service/employees";
+        let sUrl = "/sapsalesservicecloudv2/employee-service/employees";
+
+        // Add search parameter if provided
+        if (sSearch) {
+          sUrl += `?$search='${sSearch}'`;
+        }
 
         const res = await fetch(sUrl, {
           method: "GET",
@@ -85,11 +90,6 @@ sap.ui.define([], function () {
         // Handle both array and object with results property
         let aResults = Array.isArray(oData) ? oData : oData.value || oData.results || [];
 
-        // Apply client-side filtering if search term provided
-        if (sSearch) {
-          aResults = this._filterResults(aResults, sSearch);
-        }
-
         // Cache the results
         aResults.forEach((oItem) => {
           if (oItem.id) {
@@ -106,8 +106,8 @@ sap.ui.define([], function () {
     },
 
     /**
-     * Resolves a contact person ID to full object
-     * @param {string} sId - Contact person ID
+     * Resolves a contact person by defaultExternalContactId to full object
+     * @param {string} sId - Contact person defaultExternalContactId
      * @param {string} sAccountId - Optional account ID for filtering
      * @returns {Promise<Object>} Contact person object
      */
@@ -123,8 +123,14 @@ sap.ui.define([], function () {
       }
 
       try {
-        // Try to fetch by ID
-        const sUrl = `/sapsalesservicecloudv2/contact-person-service/contactPersons/${sId}`;
+        // Fetch using $filter with defaultExternalContactId
+        let sUrl = "/sapsalesservicecloudv2/contact-person-service/contactPersons?";
+        sUrl += `$filter=defaultExternalContactId eq '${sId}'`;
+        
+        if (sAccountId) {
+          sUrl += ` and accountId eq '${sAccountId}'`;
+        }
+
         const res = await fetch(sUrl, {
           method: "GET",
           credentials: "include",
@@ -136,14 +142,19 @@ sap.ui.define([], function () {
         if (res.ok) {
           const oData = await res.json();
           // Handle response wrapped in 'value' node
-          const oResult = oData.value || oData;
-          this._cache[sCacheKey] = oResult;
-          return oResult;
+          let aResults = Array.isArray(oData) ? oData : oData.value || oData.results || [];
+          if (aResults.length > 0) {
+            const oResult = aResults[0];
+            this._cache[sCacheKey] = oResult;
+            return oResult;
+          }
         }
 
-        // If direct fetch fails, search for it
+        // If filter fetch fails, search for it as fallback
         const aResults = await this.fetchContactPersons(null, sAccountId);
-        const oFound = aResults.find((oItem) => oItem.id === sId || oItem.displayId === sId);
+        const oFound = aResults.find(
+          (oItem) => oItem.defaultExternalContactId === sId || oItem.id === sId || oItem.displayId === sId
+        );
         if (oFound) {
           this._cache[sCacheKey] = oFound;
           return oFound;
@@ -157,8 +168,8 @@ sap.ui.define([], function () {
     },
 
     /**
-     * Resolves an employee ID to full object
-     * @param {string} sId - Employee ID
+     * Resolves an employee by employeeDisplayId to full object
+     * @param {string} sId - Employee employeeDisplayId
      * @returns {Promise<Object>} Employee object
      */
     resolveEmployeeById: async function (sId) {
@@ -173,8 +184,9 @@ sap.ui.define([], function () {
       }
 
       try {
-        // Try to fetch by ID
-        const sUrl = `/sapsalesservicecloudv2/employee-service/employees/${sId}`;
+        // Fetch using $filter with employeeDisplayId
+        const sUrl = `/sapsalesservicecloudv2/employee-service/employees?$filter=employeeDisplayId eq '${sId}'`;
+
         const res = await fetch(sUrl, {
           method: "GET",
           credentials: "include",
@@ -186,15 +198,18 @@ sap.ui.define([], function () {
         if (res.ok) {
           const oData = await res.json();
           // Handle response wrapped in 'value' node
-          const oResult = oData.value || oData;
-          this._cache[sCacheKey] = oResult;
-          return oResult;
+          let aResults = Array.isArray(oData) ? oData : oData.value || oData.results || [];
+          if (aResults.length > 0) {
+            const oResult = aResults[0];
+            this._cache[sCacheKey] = oResult;
+            return oResult;
+          }
         }
 
-        // If direct fetch fails, search for it
+        // If filter fetch fails, search for it as fallback
         const aResults = await this.fetchEmployees(null);
         const oFound = aResults.find(
-          (oItem) => oItem.id === sId || oItem.employeeDisplayId === sId || oItem.displayId === sId
+          (oItem) => oItem.employeeDisplayId === sId || oItem.id === sId || oItem.displayId === sId
         );
         if (oFound) {
           this._cache[sCacheKey] = oFound;
@@ -206,26 +221,6 @@ sap.ui.define([], function () {
         console.error("Error resolving employee by ID:", err);
         return null;
       }
-    },
-
-    /**
-     * Filters results client-side based on search term
-     * @param {Array} aResults - Array of results to filter
-     * @param {string} sSearch - Search term
-     * @returns {Array} Filtered array
-     * @private
-     */
-    _filterResults: function (aResults, sSearch) {
-      if (!sSearch || !aResults || aResults.length === 0) {
-        return aResults;
-      }
-
-      const sSearchLower = sSearch.toLowerCase();
-      return aResults.filter(function (oItem) {
-        const sName = (oItem.formattedName || "").toLowerCase();
-        const sEmail = (oItem.eMail || oItem.workplaceAddress?.eMail || "").toLowerCase();
-        return sName.includes(sSearchLower) || sEmail.includes(sSearchLower);
-      });
     },
 
     /**

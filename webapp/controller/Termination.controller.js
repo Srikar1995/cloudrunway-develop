@@ -270,6 +270,17 @@ sap.ui.define(
                       console.error("Error resolving employee:", oError);
                     }
                   }
+                  // Resolve createdBy employeeDisplayId to formattedName
+                  if (oTermination.createdBy) {
+                    try {
+                      const oCreatedByEmployee = await ValueHelpService.resolveEmployeeById(oTermination.createdBy);
+                      if (oCreatedByEmployee && oCreatedByEmployee.formattedName) {
+                        oTermination.createdByResolved = oCreatedByEmployee.formattedName;
+                      }
+                    } catch (oError) {
+                      console.error("Error resolving createdBy employee:", oError);
+                    }
+                  }
                 }
                 
                 oTerminationModel.setProperty(
@@ -510,17 +521,18 @@ sap.ui.define(
           let sRequesterId = updatedData.terminationRequester;
           let sResponsibleId = updatedData.terminationResponsible;
           
-          // If we have objects stored, extract IDs from them
-          if (updatedData.requesterObject && updatedData.requesterObject.id) {
-            sRequesterId = updatedData.requesterObject.id;
-          } else if (typeof updatedData.terminationRequester === "object" && updatedData.terminationRequester.id) {
-            sRequesterId = updatedData.terminationRequester.id;
+          // If we have objects stored, extract defaultExternalContactId from them
+          if (updatedData.requesterObject && updatedData.requesterObject.defaultExternalContactId) {
+            sRequesterId = updatedData.requesterObject.defaultExternalContactId;
+          } else if (typeof updatedData.terminationRequester === "object" && updatedData.terminationRequester.defaultExternalContactId) {
+            sRequesterId = updatedData.terminationRequester.defaultExternalContactId;
           }
           
-          if (updatedData.responsibleObject && updatedData.responsibleObject.id) {
-            sResponsibleId = updatedData.responsibleObject.id;
-          } else if (typeof updatedData.terminationResponsible === "object" && updatedData.terminationResponsible.id) {
-            sResponsibleId = updatedData.terminationResponsible.id;
+          // If we have objects stored, extract employeeDisplayId from them
+          if (updatedData.responsibleObject && updatedData.responsibleObject.employeeDisplayId) {
+            sResponsibleId = updatedData.responsibleObject.employeeDisplayId;
+          } else if (typeof updatedData.terminationResponsible === "object" && updatedData.terminationResponsible.employeeDisplayId) {
+            sResponsibleId = updatedData.terminationResponsible.employeeDisplayId;
           }
 
           // Step 4: Save form data
@@ -1015,152 +1027,6 @@ sap.ui.define(
         oTerminationModel.setProperty("/taUpdateMessages", []);
       },
       
-      // ===== Value Help Handlers =====
-      // Value help for termination requester
-      onValueHelpRequester: function (oEvent) {
-        const oInput = oEvent.getSource();
-        const oDialog = oEvent.getParameter("valueHelp");
-        const oView = this.getView();
-        const oTerminationModel = oView.getModel("terminationModel");
-        const sOpportunityID = oTerminationModel.getProperty("/OpportunityID");
-        
-        if (!this._oSelectDialogRequester) {
-          this._oSelectDialogRequester = new sap.m.SelectDialog({
-            title: "Select Termination Requestor",
-            noDataText: "No Data",
-            contentWidth: "800px",
-            contentHeight: "600px",
-            confirm: this._onSelectRequester.bind(this),
-            cancel: function () {
-              this._oSelectDialogRequester.close();
-            }.bind(this),
-          });
-          oView.addDependent(this._oSelectDialogRequester);
-        }
-        
-        // Fetch and display contact persons
-        this._fetchContactPersons()
-          .then((aItems) => {
-            const oTemplate = new sap.m.StandardListItem({
-              title: "{selectModel>formattedName}",
-              description: "{selectModel>eMail}",
-              type: "Active",
-              
-            });
-            this._oSelectDialogRequester.setModel(
-              new JSONModel({ items: aItems }),
-              "selectModel"
-            );
-            this._oSelectDialogRequester.bindAggregation("items", "selectModel>/items", oTemplate);
-            this._oSelectDialogRequester.open();
-          })
-          .catch((err) => {
-            console.error("Error fetching contact persons:", err);
-            sap.m.MessageBox.error("Failed to load contact persons.");
-          });
-      },
-      // Value help for termination responsible
-      onValueHelpResponsible: function (oEvent) {
-        const oInput = oEvent.getSource();
-        const oView = this.getView();
-        
-        if (!this._oSelectDialogResponsible) {
-          this._oSelectDialogResponsible = new sap.m.SelectDialog({
-            title: "Select Termination Responsible",
-            noDataText: "No Data",
-            contentWidth: "800px",
-            contentHeight: "600px",
-            confirm: this._onSelectResponsible.bind(this),
-            cancel: function () {
-              this._oSelectDialogResponsible.close();
-            }.bind(this),
-          });
-          oView.addDependent(this._oSelectDialogResponsible);
-        }
-        
-        this._fetchEmployees()
-          .then((aItems) => {
-            const oTemplate = new sap.m.StandardListItem({
-              title: "{selectModel>formattedName}",
-              description: "{selectModel>workplaceAddress/eMail}",
-              type: "Active",
-            });
-            this._oSelectDialogResponsible.setModel(
-              new JSONModel({ items: aItems }),
-              "selectModel"
-            );
-            this._oSelectDialogResponsible.bindAggregation("items", "selectModel>/items", oTemplate);
-            this._oSelectDialogResponsible.open();
-          })
-          .catch((err) => {
-            console.error("Error fetching employees:", err);
-            sap.m.MessageBox.error("Failed to load employees.");
-          });
-      },
-      onSuggestionRequester: function (oEvent) {
-        const sValue = oEvent.getParameter("suggestValue");
-        const oInput = oEvent.getSource();
-        const oView = this.getView();
-        const oTerminationModel = oView.getModel("terminationModel");
-        const sOpportunityID = oTerminationModel.getProperty("/OpportunityID");
-        const that = this;
-        
-        // Get dialog and its model
-        if (this._pDialog) {
-          this._pDialog.then((oDialog) => {
-            const oValueHelpModel = oDialog.getModel("valueHelpModel");
-            
-            // Clear previous timeout
-            if (that._suggestionTimeoutRequester) {
-              clearTimeout(that._suggestionTimeoutRequester);
-            }
-            
-            // Debounce search
-            that._suggestionTimeoutRequester = setTimeout(() => {
-              that._fetchContactPersons(sValue)
-                .then((aItems) => {
-                  if (oValueHelpModel) {
-                    oValueHelpModel.setProperty("/requesterSuggestions", aItems);
-                  }
-                })
-                .catch((err) => {
-                  console.error("Error fetching suggestions:", err);
-                });
-            }, 300);
-          });
-        }
-      },
-      onSuggestionResponsible: function (oEvent) {
-        const sValue = oEvent.getParameter("suggestValue");
-        const oInput = oEvent.getSource();
-        const oView = this.getView();
-        const that = this;
-        
-        // Get dialog and its model
-        if (this._pDialog) {
-          this._pDialog.then((oDialog) => {
-            const oValueHelpModel = oDialog.getModel("valueHelpModel");
-            
-            // Clear previous timeout
-            if (that._suggestionTimeoutResponsible) {
-              clearTimeout(that._suggestionTimeoutResponsible);
-            }
-            
-            // Debounce search
-            that._suggestionTimeoutResponsible = setTimeout(() => {
-              that._fetchEmployees(sValue)
-                .then((aItems) => {
-                  if (oValueHelpModel) {
-                    oValueHelpModel.setProperty("/responsibleSuggestions", aItems);
-                  }
-                })
-                .catch((err) => {
-                  console.error("Error fetching suggestions:", err);
-                });
-            }, 300);
-          });
-        }
-      },
       // ===== ValueHelpInput Event Handlers =====
       onRequesterSelected: function (oEvent) {
         const oSelectedItem = oEvent.getParameter("selectedItem");
@@ -1201,124 +1067,6 @@ sap.ui.define(
       },
       onResponsibleChange: function (oEvent) {
         // Handle change event if needed
-      },
-      _onSelectRequester: function (oEvent) {
-        const oView = this.getView();
-        const oTerminationModel = oView.getModel("terminationModel");
-        const oSelectedItem = oEvent.getParameter("selectedItem");
-        const oContext = oSelectedItem.getBindingContext("selectModel");
-        if (oContext) {
-          const oData = oContext.getObject();
-          if (oTerminationModel.getProperty("/createOpen")) {
-            const oCreateModel = this._pDialog.getModel("createModel");
-            oCreateModel.setProperty("/requestor", oData);
-          }
-        }
-        // this._oSelectDialogRequester.close();
-      },
-      _onSelectResponsible: function (oEvent) {
-        const oView = this.getView();
-        const oTerminationModel = oView.getModel("terminationModel");
-        const oSelectedItem = oEvent.getParameter("selectedItem");
-        const oContext = oSelectedItem.getBindingContext("selectModel");
-        if (oContext) {
-          const oData = oContext.getObject();
-          if (oTerminationModel.getProperty("/createOpen")) {
-            const oCreateModel = this._pDialog.getModel("createModel");
-            oCreateModel.setProperty("/responsible", oData);
-          }
-        }
-        // this._oSelectDialogResponsible.close();
-      },
-      _fetchContactPersons: async function (sSearch) {
-        const oView = this.getView();
-        const oTerminationModel = oView.getModel("terminationModel");
-        const sAccountId = oTerminationModel.getProperty("/oppAccountID");
-        try {
-          let sUrl = "/sapsalesservicecloudv2/contact-person-service/contactPersons?$top=200";
-          
-          // Add accountid filter if available (only eq operator works)
-          if (sAccountId) {
-            sUrl += `&$filter=accountId eq '${sAccountId}'`;
-          }
-          
-          const res = await fetch(sUrl, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Accept": "application/json",
-            },
-          });
-          
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          }
-          
-          const oData = await res.json();
-          // Handle both array and object with results property
-          let aResults = Array.isArray(oData) ? oData : (oData.value || oData.results || []);
-          
-          // Apply client-side filtering if search term provided
-          if (sSearch) {
-            aResults = this._filterValueHelpResults(aResults, sSearch);
-          }
-          
-          return aResults;
-        } catch (err) {
-          console.error("Error fetching contact persons:", err);
-          throw err;
-        }
-      },
-      _fetchEmployees: async function (sSearch) {
-        try {
-          const sUrl = "/sapsalesservicecloudv2/employee-service/employees";
-          
-          const res = await fetch(sUrl, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Accept": "application/json",
-            },
-          });
-          
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          }
-          
-          const oData = await res.json();
-          // Handle both array and object with results property
-          let aResults = Array.isArray(oData) ? oData : (oData.value || oData.results || []);
-          
-          // Apply client-side filtering if search term provided
-          if (sSearch) {
-            aResults = this._filterValueHelpResults(aResults, sSearch);
-          }
-          
-          return aResults;
-        } catch (err) {
-          console.error("Error fetching employees:", err);
-          throw err;
-        }
-      },
-
-      /**
-       * Filters value help results client-side based on search term
-       * @param {Array} aResults - Array of results to filter
-       * @param {string} sSearch - Search term
-       * @returns {Array} Filtered array
-       * @private
-       */
-      _filterValueHelpResults: function (aResults, sSearch) {
-        if (!sSearch || !aResults || aResults.length === 0) {
-          return aResults;
-        }
-
-        const sSearchLower = sSearch.toLowerCase();
-        return aResults.filter(function (oItem) {
-          const sName = (oItem.formattedName || "").toLowerCase();
-          const sEmail = (oItem.eMail || oItem.workplaceAddress?.eMail || "").toLowerCase();
-          return sName.includes(sSearchLower) || sEmail.includes(sSearchLower);
-        });
       },
     });
   }
