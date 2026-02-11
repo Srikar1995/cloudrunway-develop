@@ -172,8 +172,11 @@ sap.ui.define(
               oTerminationModel.setProperty("/oppRenewalRiskReason", oData.extensions?.Z_RenewalRiskReason);
               oTerminationModel.setProperty("/oppBusinessScenario", oData.extensions?.Z_BusinessScenario);
               oTerminationModel.setProperty("/oppAccountID", oData.account?.id);
+              oTerminationModel.setProperty("/contractStartDate", oData.extensions?.Z_QuoteContractStartDate);
               oTerminationModel.setProperty("/contractEndDate", oData.extensions?.Z_QuoteContractEndDate);
               oTerminationModel.setProperty("/oppOrigin", oData.source);
+              oTerminationModel.setProperty("/oppEUDataAct", oData.Z_EuData);
+
               // that._fetchContractDetails(oData.extensions?.Z_ContractDocId);
             } else {
               oTerminationModel.setProperty("/taMessages", [
