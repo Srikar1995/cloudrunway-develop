@@ -105,6 +105,7 @@ sap.ui.define(
           subscriptionContractId: "",
           oppRenewalRiskReason: "",
           oppBusinessScenario: "",
+          oppOrigin: "",
           pendingAttachments: [],
           deletedAttachmentIds: [],
           originalAttachmentsList: [],
@@ -172,6 +173,7 @@ sap.ui.define(
               oTerminationModel.setProperty("/oppBusinessScenario", oData.extensions?.Z_BusinessScenario);
               oTerminationModel.setProperty("/oppAccountID", oData.account?.id);
               oTerminationModel.setProperty("/contractEndDate", oData.extensions?.Z_QuoteContractEndDate);
+              oTerminationModel.setProperty("/oppOrigin", oData.source);
               // that._fetchContractDetails(oData.extensions?.Z_ContractDocId);
             } else {
               oTerminationModel.setProperty("/taMessages", [
@@ -857,11 +859,11 @@ sap.ui.define(
           const sAttachmentKey = `ID=${sAttachmentId}`;
           
           // Use /content endpoint for downloads
-          sMediaLink = `/terminationbackend/odata/v4/termination/TerminationRequests(${oAttachment.up__ID})/attachments(${sAttachmentKey})/content`;
+          sMediaLink = sap.ui.require.toUrl("cloudrunway") + `/terminationbackend/odata/v4/termination/TerminationRequests(${oAttachment.up__ID})/attachments(${sAttachmentKey})/content`;
         } else {
           // If server returned a relative media link, make sure it's using the same backend prefix
           if (!sMediaLink.startsWith("http") && !sMediaLink.startsWith("/")) {
-            sMediaLink = `/terminationbackend/odata/v4/termination/${sMediaLink}`;
+            sMediaLink = sap.ui.require.toUrl("cloudrunway") + `/terminationbackend/odata/v4/termination/${sMediaLink}`;
           }
           // Ensure it has the endpoint suffix
           if (
@@ -1005,7 +1007,7 @@ sap.ui.define(
 
         const sAttachmentKey = this._formatAttachmentKey(oAttachment);
 
-        const sDeleteUrl = `/terminationbackend/odata/v4/termination/TerminationRequestAttachments(${sAttachmentKey})`;
+        const sDeleteUrl = sap.ui.require.toUrl("cloudrunway") + `/terminationbackend/odata/v4/termination/TerminationRequestAttachments(${sAttachmentKey})`;
 
         const res = await fetch(sDeleteUrl, {
           method: "DELETE",

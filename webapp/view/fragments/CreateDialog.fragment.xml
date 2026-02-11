@@ -26,7 +26,7 @@
                               color="#0070f2"
                               tooltip="More info" />
                         </HBox>
-                        <Input id="selBusinessScenario" enabled="false" width="100%" value="{parts: [{path: 'terminationModel>/BusinessScenarioList'}, {path: 'terminationModel>/oppBusinessScenario'}], formatter:'.formatter.getValueDescr'}"/>
+                        <Input id="selBusinessScenario" enabled="false" width="100%" value="{parts: [{path: 'terminationModel>/BusinessScenarioList'}, {path: 'createModel>/businessScenario'}], formatter:'.formatter.getValueDescr'}"/>
                      </VBox>
                      <VBox height="50px" class="sapUiSmallMarginEnd" >
                         <Label id="lblTerminationOrigin" text="{i18n>terminationOrigin}" required="true"/>
@@ -43,7 +43,7 @@
                               color="#0070f2"
                               tooltip="More info" />
                         </HBox>
-                        <Input id="inpRenewalRiskReason" enabled="false" width="100%" value="{parts: [{path: 'terminationModel>/RenewalRiskReasonList'}, {path: 'terminationModel>/oppRenewalRiskReason'}], formatter:'.formatter.getValueDescr'}" />
+                        <Input id="inpRenewalRiskReason" enabled="false" width="100%" value="{parts: [{path: 'terminationModel>/RenewalRiskReasonList'}, {path: 'createModel>/riskReason'}], formatter:'.formatter.getValueDescr'}" />
                      </VBox>
                     </layout:content>
                 </layout:Grid>

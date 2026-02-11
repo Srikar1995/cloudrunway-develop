@@ -44,67 +44,83 @@
   "BusinessScenarioList": [
     {
       "key": "Z01",
-      "text": "Customer/Partner Initiated Full Termination"
+      "text": "Customer/Partner Initiated Full Termination",
+      "bkey": "CustomerPartnerInitiatedFullTermination"
     },
     {
       "key": "Z02",
-      "text": "Partial Termination"
+      "text": "Partial Termination",
+      "bkey": ""
     },
     {
       "key": "Z03",
-      "text": "SAP Initiated Full Termination"
+      "text": "SAP Initiated Full Termination",
+      "bkey": "SAPInitiatedFullTermination"
     },
     {
       "key": "Z04",
-      "text": "Cloud Concession"
+      "text": "Cloud Concession",
+      "bkey": ""
     },
     {
       "key": "Z05",
-      "text": "One-Time Credit"
+      "text": "One-Time Credit",
+      "bkey": ""
     },
     {
       "key": "Z06",
-      "text": "Multi-Year Credit"
+      "text": "Multi-Year Credit",
+      "bkey": ""
     },
     {
       "key": "Z07",
-      "text": "EU Data Act"
+      "text": "EU Data Act",
+      "bkey": "EUDataAct"
     },
     {
       "key": "Z08",
-      "text": "Termination for Convenience (T4C)"
+      "text": "Termination for Convenience (T4C)",
+      "bkey": ""
     },
     {
       "key": "Z09",
-      "text": "Partner Initiated Risk (only to be used by Partners!)"
+      "text": "Partner Initiated Risk (only to be used by Partners!)",
+      "bkey": ""
     },
     {
       "key": "Z10",
-      "text": "Swap Right Execution"
+      "text": "Swap Right Execution",
+      "bkey": ""
     },
     {
       "key": "Z11",
-      "text": "Flexible Cloud Addendum (FCA) Execution"
+      "text": "Flexible Cloud Addendum (FCA) Execution",
+      "bkey": ""
     },
     {
       "key": "Z12",
-      "text": "Move to Partner Managed Cloud (PMC)"
+      "text": "Move to Partner Managed Cloud (PMC)",
+      "bkey": ""
     },
     {
       "key": "Z13",
-      "text": "On-Prem to Cloud Extension (OP2C)"
+      "text": "On-Prem to Cloud Extension (OP2C)",
+      "bkey": ""
     },
     {
       "key": "Z14",
-      "text": "Cloud to Cloud Extension (C2C)"
+      "text": "Cloud to Cloud Extension (C2C)",
+      "bkey": ""
     },
     {
       "key": "Z15",
-      "text": "HEC Extension"
+      "text": "HEC Extension",
+      "bkey": ""
     },
     {
       "key": "Z16",
-      "text": "Move to RISE"
+      "text": "Move to RISE",
+      "bkey": ""
     }
   ],
   "RenewalRiskReasonList": [

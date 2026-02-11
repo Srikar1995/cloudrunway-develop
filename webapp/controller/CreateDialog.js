@@ -21,9 +21,9 @@ sap.ui.define(
         } else {
           if (!this._pDialog) {
             const oCreateModel = new JSONModel({
-              businessScenario: "",
+              businessScenario: oTerminationModel.getProperty("/oppBusinessScenario"),
               terminationOrigin: "",
-              riskReason: "",
+              riskReason: oTerminationModel.getProperty("/oppRenewalRiskReason"),
               requestor: {},
               responsible: {},
               receiptDate: "",
@@ -80,9 +80,11 @@ sap.ui.define(
         const oCreateModel = this._pDialog.getModel("createModel");
         let nonPdfExists = false;
         this.CreateDialog._clearMessages.call(this);
-
         const aFiles = oCreateModel.getProperty("/AttachmentsList")
         const sBusinessScenario = oCreateModel.getProperty("/businessScenario");
+        const sBusinessScenarioPkey = Formatter.getBackendKey(oTerminationModel.getProperty("/BusinessScenarioList"), sBusinessScenario);
+        const sOrigin = oTerminationModel.getProperty("/oppOrigin");
+        const sRenewalType = sOrigin === "ZC3" ? "Auto" : "Active";
         const sTerminationOrigin =
           oCreateModel.getProperty("/terminationOrigin");
         const sRenewalRiskReason = oCreateModel.getProperty("/riskReason");
@@ -114,11 +116,11 @@ sap.ui.define(
           displayId: "UI5-" + Date.now(),
           source: "BTP-Termination-App",
           terminationOrigin: sTerminationOrigin,
-          businessScenario: sBusinessScenario,
-          terminationType: "Standard",
-          renewalType: "Auto",
+          businessScenario: sBusinessScenarioPkey,
+          // terminationType: "Standard",
+          renewalType: sRenewalType,
           status: "InProcess",
-          contractEndDate: Formatter.formatDate(oTerminationModel.getProperty("/contractEndDate")),//"2025-12-31"
+          contractEndDate: Formatter.formatDate(oTerminationModel.getProperty("/contractEndDate"), "yyyy-MM-dd"),//"2025-12-31"
           terminationEffectiveDate: sTerminationEffectiveDate,
           terminationReceiptDate: sTerminationReceiptDate,
           terminationRequester: sTerminationRequester?.defaultExternalContactId,

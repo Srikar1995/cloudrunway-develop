@@ -81,6 +81,13 @@ sap.ui.define([
 			}
 			// Return ID as fallback
 			return sId;
-		}
+		},
+		getBackendKey: function (aValues, sKey) {
+			const selectedValue = aValues?.find((oValue)=>oValue.key === sKey);
+			if (selectedValue && selectedValue.bkey) {
+				return selectedValue.bkey;
+			}
+			return sKey;
+		},
     };
 });

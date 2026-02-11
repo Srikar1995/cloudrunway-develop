@@ -17,7 +17,7 @@ sap.ui.define([], function () {
      */
     fetchContactPersons: async function (sSearch, sAccountId) {
       try {
-        let sUrl = "/sapsalesservicecloudv2/contact-person-service/contactPersons?$top=200";
+        let sUrl = sap.ui.require.toUrl("cloudrunway") + "/sapsalesservicecloudv2/contact-person-service/contactPersons?$top=200";
 
         // Add accountid filter if available (only eq operator works)
         if (sAccountId) {
@@ -67,7 +67,7 @@ sap.ui.define([], function () {
      */
     fetchEmployees: async function (sSearch) {
       try {
-        let sUrl = "/sapsalesservicecloudv2/employee-service/employees";
+        let sUrl = sap.ui.require.toUrl("cloudrunway") + "/sapsalesservicecloudv2/employee-service/employees";
 
         // Add search parameter if provided
         if (sSearch) {
@@ -124,7 +124,7 @@ sap.ui.define([], function () {
 
       try {
         // Fetch using $filter with defaultExternalContactId
-        let sUrl = "/sapsalesservicecloudv2/contact-person-service/contactPersons?";
+        let sUrl = sap.ui.require.toUrl("cloudrunway") + "/sapsalesservicecloudv2/contact-person-service/contactPersons?";
         sUrl += `$filter=defaultExternalContactId eq '${sId}'`;
         
         if (sAccountId) {
@@ -185,7 +185,7 @@ sap.ui.define([], function () {
 
       try {
         // Fetch using $filter with employeeDisplayId
-        const sUrl = `/sapsalesservicecloudv2/employee-service/employees?$filter=employeeDisplayId eq '${sId}'`;
+        const sUrl = sap.ui.require.toUrl("cloudrunway") + `/sapsalesservicecloudv2/employee-service/employees?$filter=employeeDisplayId eq '${sId}'`;
 
         const res = await fetch(sUrl, {
           method: "GET",
