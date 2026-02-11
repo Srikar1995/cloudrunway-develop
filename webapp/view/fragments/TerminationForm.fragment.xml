@@ -11,7 +11,7 @@
             <layout:content>
                <VBox class="sapUiSmallMarginEnd" height="50px">
                   <Label text="{i18n>terminationStatus}" required="true"/>
-                  <Select id="selBusinessScenarioEdit" visible="{= ${terminationModel>/activeTerminationEditMode}}" selectedKey="{terminationModel>/activeTermination/status}" forceSelection="false" items="{path: 'terminationModel>/TerminationStatusList', filters: [{path: 'key', operator: 'NE', value1:'Completed'}]}" width="100%">
+                  <Select id="selBusinessScenarioEdit" visible="{= ${terminationModel>/activeTerminationEditMode}}" selectedKey="{terminationModel>/activeTermination/status}" forceSelection="false" items="{path: 'terminationModel>/TerminationStatusList', filters: [{path: 'key', operator: 'NE', value1:'Completed'}]}" width="100%" change="onStatusChange" valueState="{terminationModel>/fieldErrors/status/valueState}" valueStateText="{terminationModel>/fieldErrors/status/valueStateText}">
                      <core:Item id="itemBusinessScenarioEdit" key="{terminationModel>key}" text="{terminationModel>text}" />
                   </Select>
                   <ObjectStatus visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{parts: [{path: 'terminationModel>/TerminationStatusList'}, {path: 'terminationModel>/activeTermination/status'}], formatter:'.formatter.getValueDescr'}" />
@@ -37,7 +37,7 @@
                </VBox>
                <VBox class="sapUiSmallMarginEnd" height="50px">
                   <Label text="{i18n>terminationOrigin}" required="true"/>
-                  <Select id="selTerminationOriginEdit" visible="{= ${terminationModel>/activeTerminationEditMode}}" selectedKey="{terminationModel>/activeTermination/terminationOrigin}" forceSelection="false" items="{terminationModel>/TerminationOriginList}" width="100%">
+                  <Select id="selTerminationOriginEdit" visible="{= ${terminationModel>/activeTerminationEditMode}}" selectedKey="{terminationModel>/activeTermination/terminationOrigin}" forceSelection="false" items="{terminationModel>/TerminationOriginList}" width="100%" change="onTerminationOriginChange" valueState="{terminationModel>/fieldErrors/terminationOrigin/valueState}" valueStateText="{terminationModel>/fieldErrors/terminationOrigin/valueStateText}">
                      <core:Item id="itemTerminationOriginEdit" key="{terminationModel>key}" text="{terminationModel>text}" />
                   </Select>
                   <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{parts: [{path: 'terminationModel>/TerminationOriginList'}, {path: 'terminationModel>/activeTermination/terminationOrigin'}], formatter:'.formatter.getValueDescr'}" />
@@ -78,7 +78,9 @@
                      required="true"
                      width="100%"
                      valueSelected="onRequesterSelected"
-                     change="onRequesterChange" />
+                     change="onRequesterChange"
+                     valueState="{terminationModel>/fieldErrors/terminationRequester/valueState}"
+                     valueStateText="{terminationModel>/fieldErrors/terminationRequester/valueStateText}" />
                   <Text 
                      text="{parts: [{path: 'terminationModel>/activeTermination/terminationRequester'}, {path: 'terminationModel>/activeTermination/requesterObject/formattedName'}], formatter: '.formatter.resolveContactPersonName'}"
                      visible="{= !${terminationModel>/activeTerminationEditMode}}"
@@ -96,7 +98,9 @@
                      required="true"
                      width="100%"
                      valueSelected="onResponsibleSelected"
-                     change="onResponsibleChange" />
+                     change="onResponsibleChange"
+                     valueState="{terminationModel>/fieldErrors/terminationResponsible/valueState}"
+                     valueStateText="{terminationModel>/fieldErrors/terminationResponsible/valueStateText}" />
                   <Text 
                      text="{parts: [{path: 'terminationModel>/activeTermination/terminationResponsible'}, {path: 'terminationModel>/activeTermination/responsibleObject/formattedName'}], formatter: '.formatter.resolveEmployeeName'}"
                      visible="{= !${terminationModel>/activeTerminationEditMode}}"
@@ -108,24 +112,24 @@
             <layout:content>
                <VBox height="50px" class="sapUiSmallMarginEnd">
                   <Label text="{i18n>terminationRecipientDate}" required="true"/>
-                  <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationReceiptDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" />
+                  <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationReceiptDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" change="onTRDChange" valueState="{terminationModel>/fieldErrors/terminationReceiptDate/valueState}" valueStateText="{terminationModel>/fieldErrors/terminationReceiptDate/valueStateText}" />
                   <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{terminationModel>/activeTermination/terminationReceiptDate}" />
                </VBox>
                <VBox height="50px" class="sapUiSmallMarginEnd">
                   <Label text="{i18n>terminationEffectDate}" required="true"/>
-                  <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationEffectiveDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" />
+                  <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationEffectiveDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" change="onTEDChange" enabled="{parts: [{path: 'terminationModel>/activeTermination/businessScenario'}, {path: 'terminationModel>/activeTermination/status'}, {path: 'terminationModel>/oppEUDataAct'}], formatter: '.formatter.isTEDEnabled'}" valueState="{terminationModel>/fieldErrors/terminationEffectiveDate/valueState}" valueStateText="{terminationModel>/fieldErrors/terminationEffectiveDate/valueStateText}" />
                   <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{terminationModel>/activeTermination/terminationEffectiveDate}" />
                </VBox>
                <VBox class="sapUiSmallMarginEnd" height="50px" visible="{= ${terminationModel>/activeTermination/status} === 'Retracted' ? true : false}">
                   <Label text="{i18n>retractionReason}" required="true"/>
-                  <Select visible="{= ${terminationModel>/activeTerminationEditMode}}" selectedKey="{terminationModel>/activeTermination/retractionReason}" forceSelection="false" items="{terminationModel>/TerminationRetractionReasons}" width="100%">
+                  <Select visible="{= ${terminationModel>/activeTerminationEditMode}}" selectedKey="{terminationModel>/activeTermination/retractionReason}" forceSelection="false" items="{terminationModel>/TerminationRetractionReasons}" width="100%" valueState="{terminationModel>/fieldErrors/retractionReason/valueState}" valueStateText="{terminationModel>/fieldErrors/retractionReason/valueStateText}">
                      <core:Item id="itemRetractionReasonEdit" key="{terminationModel>key}" text="{terminationModel>text}" />
                   </Select>
                   <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{parts: [{path: 'terminationModel>/TerminationRetractionReasons'}, {path: 'terminationModel>/activeTermination/retractionReason'}], formatter:'.formatter.getValueDescr'}" />
                </VBox>
                <VBox height="50px" visible="{= ${terminationModel>/activeTermination/status} === 'Retracted' ? true : false}">
                   <Label text="{i18n>retractionDate}" required="true"/>
-                  <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/retractionReceivedDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" />
+                  <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/retractionReceivedDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" valueState="{terminationModel>/fieldErrors/retractionReceivedDate/valueState}" valueStateText="{terminationModel>/fieldErrors/retractionReceivedDate/valueStateText}" />
                   <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{terminationModel>/activeTermination/retractionReceivedDate}" />
                </VBox>
             </layout:content>
