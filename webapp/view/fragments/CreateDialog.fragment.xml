@@ -7,7 +7,7 @@
                      text="{= ${createModel>/taCreateMessages/0/message}}"
                      type="{= ${createModel>/taCreateMessages/0/type}}"
                      showIcon="true"
-                     showCloseButton="true">
+                     showCloseButton="false">
             </MessageStrip>
          </VBox>
          <VBox id="vboxTerminationDetails" class="sapUiSmallMarginTop">
@@ -30,7 +30,7 @@
                      </VBox>
                      <VBox height="50px" class="sapUiSmallMarginEnd" >
                         <Label id="lblTerminationOrigin" text="{i18n>terminationOrigin}" required="true"/>
-                        <Select id="selTerminationOrigin" forceSelection="false" width="100%" items="{terminationModel&gt;/TerminationOriginList}" selectedKey="{createModel>/terminationOrigin}" change=".CreateDialog.onTerminationOriginChange" valueState="{createModel>/fieldErrors/terminationOrigin/valueState}" valueStateText="{createModel>/fieldErrors/terminationOrigin/valueStateText}">
+                        <Select id="selTerminationOrigin" forceSelection="false" width="100%" items="{terminationModel&gt;/TerminationOriginList}" selectedKey="{createModel>/terminationOrigin}">
                            <core:Item id="itemTerminationOrigin" key="{terminationModel&gt;key}" text="{terminationModel&gt;text}" />
                         </Select>
                      </VBox>
@@ -62,9 +62,7 @@
                            width="100%"
                            placeholder="{i18n>enterRequestorName}"
                            valueSelected="onRequesterSelected"
-                           change="onRequesterChange"
-                           valueState="{createModel>/fieldErrors/terminationRequester/valueState}"
-                           valueStateText="{createModel>/fieldErrors/terminationRequester/valueStateText}" />
+                           change="onRequesterChange" />
                      </VBox>
                      <VBox height="50px" class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
                         <Label id="lblTerminationResponsible" text="{i18n>terminationResponsible}" required="true"/>
@@ -78,9 +76,7 @@
                            width="100%"
                            placeholder="{i18n>enterResponsibleName}"
                            valueSelected="onResponsibleSelected"
-                           change="onResponsibleChange"
-                           valueState="{createModel>/fieldErrors/terminationResponsible/valueState}"
-                           valueStateText="{createModel>/fieldErrors/terminationResponsible/valueStateText}" />
+                           change="onResponsibleChange" />
                      </VBox>
                      </layout:content>
                 </layout:Grid>
@@ -88,11 +84,11 @@
                     <layout:content>
                      <VBox height="50px" class="sapUiSmallMarginEnd">
                         <Label id="lblTerminationReceiptDate" text="{i18n>terminationRecipientDate}" required="true"/>
-                        <DatePicker id="dpTerminationReceiptDate" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Date" value="{createModel>/receiptDate}" change=".CreateDialog.onTRDChange" valueState="{createModel>/fieldErrors/terminationReceiptDate/valueState}" valueStateText="{createModel>/fieldErrors/terminationReceiptDate/valueStateText}"/>
+                        <DatePicker id="dpTerminationReceiptDate" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Date" value="{createModel>/receiptDate}"/>
                      </VBox>
                      <VBox height="50px" class="sapUiSmallMarginEnd">
                         <Label id="lblTerminationEffectiveDate" text="{i18n>terminationEffectDate}" required="true"/>
-                        <DatePicker id="dpTerminationEffectiveDate" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Date" value="{createModel>/effectData}" change=".CreateDialog.onTEDChange" valueState="{createModel>/fieldErrors/terminationEffectiveDate/valueState}" valueStateText="{createModel>/fieldErrors/terminationEffectiveDate/valueStateText}"/>
+                        <DatePicker id="dpTerminationEffectiveDate" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Date" value="{createModel>/effectData}"/>
                      </VBox>
                   </layout:content>
                </layout:Grid>

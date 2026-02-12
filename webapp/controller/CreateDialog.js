@@ -30,8 +30,7 @@ sap.ui.define(
               effectData: "",
               AttachmentsList: [],
               taCreateMessages: [],
-              loading: false,
-              fieldErrors: {}
+              loading: false
             });
             this._pDialog = sap.ui.xmlfragment(
               "cloudrunway.view.fragments.CreateDialog",
@@ -96,59 +95,8 @@ sap.ui.define(
           oCreateModel.getProperty("/receiptDate");
         const sTerminationEffectiveDate =
           oCreateModel.getProperty("/effectData");
-        const sCED = oTerminationModel.getProperty("/contractEndDate");
 
-        // Validate mandatory fields and set field-level errors
-        // Convert model properties to data object for validation
-        const oData = {
-          terminationOrigin: oCreateModel.getProperty("/terminationOrigin"),
-          requestor: oCreateModel.getProperty("/requestor"),
-          responsible: oCreateModel.getProperty("/responsible"),
-          receiptDate: oCreateModel.getProperty("/receiptDate"),
-          effectData: oCreateModel.getProperty("/effectData")
-        };
-        const oFieldErrors = Common.validateMandatoryFields(oData);
-        
-        // Validate TRD not in future
-        if (sTerminationReceiptDate) {
-          const oTRDValidation = Common.validateTRDNotFuture(sTerminationReceiptDate);
-          if (!oTRDValidation.isValid) {
-            oFieldErrors.terminationReceiptDate = {
-              valueState: "Error",
-              valueStateText: oTRDValidation.errorMessage
-            };
-          }
-        }
-        
-        // Validate EU Data Act 60-day notice if applicable
-        if (sBusinessScenario === Common.businessScenarioEUDataAct && sTerminationReceiptDate && sTerminationEffectiveDate) {
-          const oEUDAValidation = Common.validateEUDA60DayNotice(sTerminationReceiptDate, sTerminationEffectiveDate);
-          if (!oEUDAValidation.isValid) {
-            oFieldErrors.terminationEffectiveDate = {
-              valueState: "Error",
-              valueStateText: oEUDAValidation.errorMessage
-            };
-          }
-        }
-        
-        // Validate TED range (>= TRD + 60 days and <= CED)
-        if (sTerminationReceiptDate && sTerminationEffectiveDate && sCED) {
-          const oTEDRangeValidation = Common.validateTEDRange(sTerminationEffectiveDate, sTerminationReceiptDate, sCED);
-          if (!oTEDRangeValidation.isValid) {
-            oFieldErrors.terminationEffectiveDate = {
-              valueState: "Error",
-              valueStateText: oTEDRangeValidation.errorMessage
-            };
-          }
-        }
-        
-        // Set field errors in model
-        oCreateModel.setProperty("/fieldErrors", oFieldErrors);
-        
-        // Check if there are any field errors
-        const bHasFieldErrors = Object.keys(oFieldErrors).length > 0;
-        if (bHasFieldErrors) {
-          // Keep existing message strip for backward compatibility
+        if (!sTerminationOrigin || !sTerminationRequester || !sTerminationResponsible || !sTerminationReceiptDate || !sTerminationEffectiveDate) {
           oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("MANDATORYERROR"), type: "Error" }]);
           return;
         }
@@ -224,11 +172,6 @@ sap.ui.define(
                   that,
                   sNewTerminationId
                 );
-                // Clear field errors after successful creation
-                const oCreateModel = that._pDialog.getModel("createModel");
-                if (oCreateModel) {
-                  oCreateModel.setProperty("/fieldErrors", {});
-                }
                 that.CreateDialog.onCloseTerminationDialog.call(that);
                 that._readTerminations();
               } catch (err) {
@@ -341,93 +284,6 @@ sap.ui.define(
         const oODataModelV4 = this.getView().getModel("terminationModelV4");
         oCreateModel.setProperty("/taCreateMessages", []);
         oODataModelV4.setMessages([]);
-      },
-      
-      
-      /**
-       * Handler for Termination Receipt Date (TRD) change event
-       * Currently no action - validation happens only on save/create
-       * @param {object} oEvent - Change event
-       */
-      onTRDChange: function (oEvent) {
-        // Commented out: Validation on field change - errors should only show on save/create
-        // const oCreateModel = this._pDialog.getModel("createModel");
-        // const sTRD = oEvent.getParameter("value");
-        // const oValidation = Common.validateTRDNotFuture(sTRD);
-        // 
-        // // Update field error state
-        // if (!oValidation.isValid) {
-        //   oCreateModel.setProperty("/fieldErrors/terminationReceiptDate", {
-        //     valueState: "Error",
-        //     valueStateText: oValidation.errorMessage
-        //   });
-        // } else {
-        //   // Clear error if field is valid
-        //   oCreateModel.setProperty("/fieldErrors/terminationReceiptDate", {
-        //     valueState: "None",
-        //     valueStateText: ""
-        //   });
-        // }
-      },
-      
-      /**
-       * Handler for Termination Effective Date (TED) change event
-       * @param {object} oEvent - Change event
-       */
-      onTEDChange: function (oEvent) {
-        const oCreateModel = this._pDialog.getModel("createModel");
-        const oTerminationModel = this.getView().getModel("terminationModel");
-        const sTED = oEvent.getParameter("value");
-        const sTRD = oCreateModel.getProperty("/receiptDate");
-        const sBusinessScenario = oCreateModel.getProperty("/businessScenario");
-        const sCED = oTerminationModel.getProperty("/contractEndDate");
-        
-        // Validate EU Data Act 60-day notice if applicable
-        if (sBusinessScenario === Common.businessScenarioEUDataAct && sTRD && sTED) {
-          const oValidation = Common.validateEUDA60DayNotice(sTRD, sTED);
-          if (!oValidation.isValid) {
-            oCreateModel.setProperty("/fieldErrors/terminationEffectiveDate", {
-              valueState: "Error",
-              valueStateText: oValidation.errorMessage
-            });
-            return;
-          }
-        }
-        
-        // Validate TED range (>= TRD + 60 days and <= CED)
-        if (sTRD && sTED && sCED) {
-          const oRangeValidation = Common.validateTEDRange(sTED, sTRD, sCED);
-          if (!oRangeValidation.isValid) {
-            oCreateModel.setProperty("/fieldErrors/terminationEffectiveDate", {
-              valueState: "Error",
-              valueStateText: oRangeValidation.errorMessage
-            });
-            return;
-          }
-        }
-        
-        // Clear error if valid
-        oCreateModel.setProperty("/fieldErrors/terminationEffectiveDate", {
-          valueState: "None",
-          valueStateText: ""
-        });
-      },
-      
-      /**
-       * Handler for termination origin change event
-       * Currently no action - errors are only shown on save/create
-       * @param {object} oEvent - Change event
-       */
-      onTerminationOriginChange: function (oEvent) {
-        // Commented out: Error clearing on field change - errors should only show on save/create
-        // const oCreateModel = this._pDialog.getModel("createModel");
-        // const sValue = oEvent.getParameter("selectedItem")?.getKey();
-        // if (sValue) {
-        //   oCreateModel.setProperty("/fieldErrors/terminationOrigin", {
-        //     valueState: "None",
-        //     valueStateText: ""
-        //   });
-        // }
       },
     };
   }

@@ -22,6 +22,13 @@ sap.ui.define([
 			}
 			return sKey;
 		},
+		getBackendKeyDescr: function (aValues, sKey) {
+			const selectedValue = aValues?.find((oValue)=>oValue.bkey === sKey);
+			if (selectedValue && selectedValue.text) {
+				return selectedValue.text;
+			}
+			return sKey;
+		},
 		getTAStatusState: function (sStatus) {
 			if (sStatus === "Retracted") {
 				return "Error";
@@ -91,27 +98,6 @@ sap.ui.define([
 			return sKey;
 		},
 		/**
-		 * Format date for display in error messages (dd.mmm.yy format)
-		 * @param {string} sDateValue - Date value in any format
-		 * @returns {string} - Formatted date string (dd.mmm.yy) or empty string
-		 */
-		formatDateForDisplay: function (sDateValue) {
-			if (!sDateValue) {
-				return "";
-			}
-			try {
-				const oDate = new Date(sDateValue);
-				const dDateFormat = DateFormat.getDateInstance({
-					pattern: "dd.MMM.yy",
-					UTC: true
-				});
-				return dDateFormat.format(oDate);
-			} catch (oError) {
-				console.error("Error formatting date:", oError);
-				return "";
-			}
-		},
-		/**
 		 * Determines if Termination Effective Date (TED) field should be enabled
 		 * @param {string} sBusinessScenario - Business scenario key (e.g., "Z01", "Z07")
 		 * @param {string} sStatus - Termination status (e.g., "InProcess")
@@ -120,18 +106,18 @@ sap.ui.define([
 		 */
 		isTEDEnabled: function (sBusinessScenario, sStatus, sEUDataActCoverage) {
 			// If status is not "InProcess", TED is not editable
-			if (sStatus !== Common.statusInProcess) {
+			if (sStatus !== Common?.statusInProcess) {
 				return false;
 			}
 
 			// Customer/Partner Initiated Full Termination (Z01): TED is NOT editable
-			if (sBusinessScenario === Common.businessScenarioCustomerInitiated) {
+			if (sBusinessScenario === Common?.businessScenarioCustomerInitiatedBkey) {
 				return false;
 			}
 
 			// EU Data Act (Z07): TED is editable ONLY if coverage is "FC" (Fully Covered)
-			if (sBusinessScenario === Common.businessScenarioEUDataAct) {
-				return sEUDataActCoverage === Common.euDataActCoverageFullyCovered;
+			if (sBusinessScenario === Common?.businessScenarioEUDataAct) {
+				return sEUDataActCoverage === Common?.euDataActCoverageFullyCovered;
 			}
 
 			// SAP Initiated Termination: TED is editable if status is "InProcess"

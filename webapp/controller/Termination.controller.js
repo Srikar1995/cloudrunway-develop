@@ -110,8 +110,7 @@ sap.ui.define(
           deletedAttachmentIds: [],
           originalAttachmentsList: [],
           mergedAttachmentsList: [],
-          originalActiveTermination: null,
-          fieldErrors: {}
+          originalActiveTermination: null
         });
         oView.setModel(oTerminationModel, "terminationModel");
       },
@@ -424,141 +423,7 @@ sap.ui.define(
         
         oTerminationModel.setProperty("/activeTerminationEditMode", false);
         oODataModel.resetChanges("TerminationUpdateGroup");
-        
-        // Clear field errors on cancel
-        oTerminationModel.setProperty("/fieldErrors", {});
       },
-      
-      
-      /**
-       * Handler for Termination Receipt Date (TRD) change event
-       * Currently no action - validation happens only on save/create
-       * @param {object} oEvent - Change event
-       */
-      onTRDChange: function (oEvent) {
-        // Commented out: Validation on field change - errors should only show on save/create
-        // const oTerminationModel = this.getView().getModel("terminationModel");
-        // const sTRD = oEvent.getParameter("value");
-        // const oValidation = Common.validateTRDNotFuture(sTRD);
-        // 
-        // // Update field error state
-        // if (!oValidation.isValid) {
-        //   oTerminationModel.setProperty("/fieldErrors/terminationReceiptDate", {
-        //     valueState: "Error",
-        //     valueStateText: oValidation.errorMessage
-        //   });
-        // } else {
-        //   // Clear error if field is valid
-        //   oTerminationModel.setProperty("/fieldErrors/terminationReceiptDate", {
-        //     valueState: "None",
-        //     valueStateText: ""
-        //   });
-        // }
-      },
-      
-      /**
-       * Handler for Termination Effective Date (TED) change event
-       * @param {object} oEvent - Change event
-       */
-      /**
-       * Handler for Termination Effective Date (TED) change event
-       * Validates TED date range and EU Data Act requirements
-       * Note: Field is disabled when not editable via formatter, but this provides additional validation
-       * @param {object} oEvent - Change event
-       */
-      onTEDChange: function (oEvent) {
-        const oTerminationModel = this.getView().getModel("terminationModel");
-        const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
-        const sTED = oEvent.getParameter("value");
-        const sTRD = oActiveTermination.terminationReceiptDate;
-        const sBusinessScenario = oActiveTermination.businessScenario;
-        const sStatus = oActiveTermination.status;
-        const sEUDataActCoverage = oTerminationModel.getProperty("/oppEUDataAct");
-        const sCED = oTerminationModel.getProperty("/contractEndDate");
-        
-        // Safety check: If field is disabled (not editable), revert change
-        // This should not happen as field is disabled, but provides defense in depth
-        const bIsTEDEditable = this.formatter.isTEDEnabled(sBusinessScenario, sStatus, sEUDataActCoverage);
-        if (!bIsTEDEditable && sBusinessScenario === Common.businessScenarioCustomerInitiated) {
-          const sFormattedCED = formatter.formatDateForDisplay(sCED);
-          const sErrorMessage = Common.getLocalTextByi18nValue("TEDNOTEDITABLECUSTOMER");
-          oTerminationModel.setProperty("/fieldErrors/terminationEffectiveDate", {
-            valueState: "Error",
-            valueStateText: sErrorMessage.replace("dd.mmm.yy", sFormattedCED)
-          });
-          // Revert to original value
-          const oOriginalTermination = oTerminationModel.getProperty("/originalActiveTermination");
-          if (oOriginalTermination && oOriginalTermination.terminationEffectiveDate) {
-            oTerminationModel.setProperty("/activeTermination/terminationEffectiveDate", oOriginalTermination.terminationEffectiveDate);
-          }
-          return;
-        }
-        
-        // Validate EU Data Act 60-day notice if applicable
-        if (sBusinessScenario === Common.businessScenarioEUDataAct && sTRD && sTED) {
-          const oValidation = Common.validateEUDA60DayNotice(sTRD, sTED);
-          if (!oValidation.isValid) {
-            oTerminationModel.setProperty("/fieldErrors/terminationEffectiveDate", {
-              valueState: "Error",
-              valueStateText: oValidation.errorMessage
-            });
-            return;
-          }
-        }
-        
-        // Validate TED range (>= TRD + 60 days and <= CED)
-        if (sTRD && sTED && sCED) {
-          const oRangeValidation = Common.validateTEDRange(sTED, sTRD, sCED);
-          if (!oRangeValidation.isValid) {
-            oTerminationModel.setProperty("/fieldErrors/terminationEffectiveDate", {
-              valueState: "Error",
-              valueStateText: oRangeValidation.errorMessage
-            });
-            return;
-          }
-        }
-        
-        // Clear error if valid
-        oTerminationModel.setProperty("/fieldErrors/terminationEffectiveDate", {
-          valueState: "None",
-          valueStateText: ""
-        });
-      },
-      
-      /**
-       * Handler for termination origin change event
-       * Currently no action - errors are only shown on save/create
-       * @param {object} oEvent - Change event
-       */
-      onTerminationOriginChange: function (oEvent) {
-        // Commented out: Error clearing on field change - errors should only show on save/create
-        // const oTerminationModel = this.getView().getModel("terminationModel");
-        // const sValue = oEvent.getParameter("selectedItem")?.getKey();
-        // if (sValue) {
-        //   oTerminationModel.setProperty("/fieldErrors/terminationOrigin", {
-        //     valueState: "None",
-        //     valueStateText: ""
-        //   });
-        // }
-      },
-      
-      /**
-       * Handler for status change event
-       * Currently no action - errors are only shown on save/create
-       * @param {object} oEvent - Change event
-       */
-      onStatusChange: function (oEvent) {
-        // Commented out: Error clearing on field change - errors should only show on save/create
-        // const oTerminationModel = this.getView().getModel("terminationModel");
-        // const sValue = oEvent.getParameter("selectedItem")?.getKey();
-        // if (sValue) {
-        //   oTerminationModel.setProperty("/fieldErrors/status", {
-        //     valueState: "None",
-        //     valueStateText: ""
-        //   });
-        // }
-      },
-      
       onTerminationUpdate: async function (oEvent) {
         const that = this;
         const oTerminationModel = this.getView().getModel("terminationModel");
@@ -598,72 +463,20 @@ sap.ui.define(
           return;
         }
 
-        // Validate mandatory fields and set field-level errors
-        const bIsRetracted = updatedData.status === "Retracted";
-        const oFieldErrors = Common.validateMandatoryFields(updatedData, bIsRetracted);
-        
-        // Validate TRD not in future
-        if (updatedData.terminationReceiptDate) {
-          const oTRDValidation = Common.validateTRDNotFuture(updatedData.terminationReceiptDate);
-          if (!oTRDValidation.isValid) {
-            oFieldErrors.terminationReceiptDate = {
-              valueState: "Error",
-              valueStateText: oTRDValidation.errorMessage
-            };
-          }
-        }
-        
-        // Validate TED editability and date range
-        const sBusinessScenario = updatedData.businessScenario;
-        const sStatus = updatedData.status;
-        const sEUDataActCoverage = oTerminationModel.getProperty("/oppEUDataAct");
-        const sCED = oTerminationModel.getProperty("/contractEndDate");
-        
-        if (updatedData.terminationEffectiveDate) {
-          // Check if TED is editable using formatter
-          const bIsTEDEditable = this.formatter.isTEDEnabled(sBusinessScenario, sStatus, sEUDataActCoverage);
-          
-          // If TED is not editable (e.g., Customer Initiated scenario), show error and skip other validations
-          if (!bIsTEDEditable && sBusinessScenario === Common.businessScenarioCustomerInitiated) {
-            const sFormattedCED = formatter.formatDateForDisplay(sCED);
-            const sErrorMessage = Common.getLocalTextByi18nValue("TEDNOTEDITABLECUSTOMER");
-            oFieldErrors.terminationEffectiveDate = {
-              valueState: "Error",
-              valueStateText: sErrorMessage.replace("dd.mmm.yy", sFormattedCED)
-            };
-          } else if (bIsTEDEditable) {
-            // Only validate date ranges if TED is editable
-            // Validate EU Data Act 60-day notice if applicable
-            if (sBusinessScenario === Common.businessScenarioEUDataAct && updatedData.terminationReceiptDate) {
-              const oEUDAValidation = Common.validateEUDA60DayNotice(updatedData.terminationReceiptDate, updatedData.terminationEffectiveDate);
-              if (!oEUDAValidation.isValid) {
-                oFieldErrors.terminationEffectiveDate = {
-                  valueState: "Error",
-                  valueStateText: oEUDAValidation.errorMessage
-                };
-              }
-            }
-            
-            // Validate TED range (>= TRD + 60 days and <= CED)
-            if (updatedData.terminationReceiptDate && sCED) {
-              const oTEDRangeValidation = Common.validateTEDRange(updatedData.terminationEffectiveDate, updatedData.terminationReceiptDate, sCED);
-              if (!oTEDRangeValidation.isValid) {
-                oFieldErrors.terminationEffectiveDate = {
-                  valueState: "Error",
-                  valueStateText: oTEDRangeValidation.errorMessage
-                };
-              }
-            }
-          }
-        }
-        
-        // Set field errors in model
-        oTerminationModel.setProperty("/fieldErrors", oFieldErrors);
-        
-        // Check if there are any field errors
-        const bHasFieldErrors = Object.keys(oFieldErrors).length > 0;
-        if (bHasFieldErrors) {
-          // Keep existing message strip for backward compatibility
+        const isMandatoryFieldsEmpty =
+          !updatedData.status ||
+          !updatedData.terminationOrigin ||
+          !updatedData.terminationRequester ||
+          !updatedData.terminationResponsible ||
+          !updatedData.terminationReceiptDate ||
+          !updatedData.terminationEffectiveDate;
+
+        const isRetractedFieldsEmpty =
+          updatedData.status === "Retracted" &&
+          (!updatedData.retractionReason ||
+            !updatedData.retractionReceivedDate);
+
+        if (isMandatoryFieldsEmpty || isRetractedFieldsEmpty) {
           oTerminationModel.setProperty("/taUpdateMessages", [
             { message: "Please enter all mandatory fields", type: "Error" },
           ]);
@@ -765,9 +578,6 @@ sap.ui.define(
           await this._readAttachments(oActiveTermination);
           
           sap.m.MessageToast.show("Termination updated successfully.");
-          
-          // Clear field errors after successful save
-          oTerminationModel.setProperty("/fieldErrors", {});
           this._readTerminations();
           oTerminationModel.setProperty("/activeTerminationEditMode", false);
         } catch (oError) {
@@ -1229,23 +1039,10 @@ sap.ui.define(
         const oView = this.getView();
         const oTerminationModel = oView.getModel("terminationModel");
 
-        // Commented out: Error clearing on field change - errors should only show on save/create
-        // Clear error state when requester is selected
-        // oTerminationModel.setProperty("/fieldErrors/terminationRequester", {
-        //   valueState: "None",
-        //   valueStateText: ""
-        // });
-
         // Check if we're in create dialog or edit mode
         if (oTerminationModel.getProperty("/createOpen")) {
           const oCreateModel = this._pDialog.getModel("createModel");
           oCreateModel.setProperty("/requestor", oSelectedItem);
-          // Commented out: Error clearing on field change - errors should only show on save/create
-          // Clear error in create model too
-          // oCreateModel.setProperty("/fieldErrors/terminationRequester", {
-          //   valueState: "None",
-          //   valueStateText: ""
-          // });
         } else {
           // Edit mode - store object for later ID extraction
           const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
@@ -1254,16 +1051,6 @@ sap.ui.define(
         }
       },
       onRequesterChange: function (oEvent) {
-        const oTerminationModel = this.getView().getModel("terminationModel");
-        const sValue = oEvent.getParameter("value");
-        // Commented out: Error clearing on field change - errors should only show on save/create
-        // Clear error state when field has a value
-        // if (sValue) {
-        //   oTerminationModel.setProperty("/fieldErrors/terminationRequester", {
-        //     valueState: "None",
-        //     valueStateText: ""
-        //   });
-        // }
         // Handle change event if needed
       },
       onResponsibleSelected: function (oEvent) {
@@ -1271,24 +1058,11 @@ sap.ui.define(
         const oControl = oEvent.getSource();
         const oView = this.getView();
         const oTerminationModel = oView.getModel("terminationModel");
-        
-        // Commented out: Error clearing on field change - errors should only show on save/create
-        // Clear error state when responsible is selected
-        // oTerminationModel.setProperty("/fieldErrors/terminationResponsible", {
-        //   valueState: "None",
-        //   valueStateText: ""
-        // });
 
         // Check if we're in create dialog or edit mode
         if (oTerminationModel.getProperty("/createOpen")) {
           const oCreateModel = this._pDialog.getModel("createModel");
           oCreateModel.setProperty("/responsible", oSelectedItem);
-          // Commented out: Error clearing on field change - errors should only show on save/create
-          // Clear error in create model too
-          // oCreateModel.setProperty("/fieldErrors/terminationResponsible", {
-          //   valueState: "None",
-          //   valueStateText: ""
-          // });
         } else {
           // Edit mode - store object for later ID extraction
           const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
