@@ -8,37 +8,37 @@ sap.ui.define(
       openCreateTermination: function () {
         const oView = this.getView();
         const oTerminationModel = oView.getModel("terminationModel");
-        oTerminationModel.setProperty("/taMessages",[]);
+        oTerminationModel.setProperty("/taMessages", []);
         const oPrevalidationData = oTerminationModel.getProperty("/preValidationData");
         if (!oPrevalidationData.canCreateTermination) {
-          const sMessage = oPrevalidationData?.validationResults.find((validation)=>!validation.passed).message;
+          const sMessage = oPrevalidationData?.validationResults.find((validation) => !validation.passed).message;
           oTerminationModel.setProperty("/taMessages", [
-              {
-                message: sMessage,
-                type: "Error",
-              },
-            ])
+            {
+              message: sMessage,
+              type: "Error",
+            },
+          ])
         } else {
           if (!this._pDialog) {
-            const oCreateModel = new JSONModel({
-              businessScenario: oTerminationModel.getProperty("/oppBusinessScenario"),
-              terminationOrigin: "",
-              riskReason: oTerminationModel.getProperty("/oppRenewalRiskReason"),
-              requestor: {},
-              responsible: {},
-              receiptDate: "",
-              effectData: "",
-              AttachmentsList: [],
-              taCreateMessages: [],
-              loading: false
-            });
             this._pDialog = sap.ui.xmlfragment(
               "cloudrunway.view.fragments.CreateDialog",
               this
             );
-            this._pDialog.setModel(oCreateModel, "createModel");
             oView.addDependent(this._pDialog);
           }
+          const oCreateModel = new JSONModel({
+            businessScenario: oTerminationModel.getProperty("/oppBusinessScenario"),
+            terminationOrigin: "",
+            riskReason: oTerminationModel.getProperty("/oppRenewalRiskReason"),
+            requestor: {},
+            responsible: {},
+            receiptDate: "",
+            effectData: "",
+            AttachmentsList: [],
+            taCreateMessages: [],
+            loading: false
+          });
+          this._pDialog.setModel(oCreateModel, "createModel");
           this._pDialog.open();
           oTerminationModel.setProperty("/createOpen", true);
         }
@@ -98,6 +98,22 @@ sap.ui.define(
 
         if (!sTerminationOrigin || !sTerminationRequester || !sTerminationResponsible || !sTerminationReceiptDate || !sTerminationEffectiveDate) {
           oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("MANDATORYERROR"), type: "Error" }]);
+          return;
+        }
+
+        // Termination receipt date cannot be in future
+        const oTRDValidation = Common.validateTRDNotFuture(sTerminationReceiptDate);
+        if (!oTRDValidation.isValid) {
+          oCreateModel.setProperty("/taCreateMessages", [{ message: oTRDValidation.errorMessage, type: "Error" }]);
+          return;
+        }
+
+        // Termination Effective Date must be within contract start and end dates
+        const sContractStartDate = oTerminationModel.getProperty("/contractStartDate");
+        const sContractEndDate = oTerminationModel.getProperty("/contractEndDate");
+        const oTEDRangeValidation = Common.validateTEDWithinContractRange(sTerminationEffectiveDate, sContractStartDate, sContractEndDate);
+        if (!oTEDRangeValidation.isValid) {
+          oCreateModel.setProperty("/taCreateMessages", [{ message: oTEDRangeValidation.errorMessage, type: "Error" }]);
           return;
         }
 

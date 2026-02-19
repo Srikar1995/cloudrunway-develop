@@ -1,6 +1,6 @@
 <core:FragmentDefinition xmlns="sap.m" xmlns:f="sap.ui.layout.form" xmlns:custom="hdm.control" xmlns:core="sap.ui.core" xmlns:layout="sap.ui.layout" xmlns:control="cloudrunway.control">
     <OverflowToolbar design="Solid" class="sapMListHdr sapMTBHeader-CTX">
-           <Title text="{i18n>terminationDetails}"/>
+           <Title text="{terminationModel>/activeTermination/displayId} - {i18n>terminationDetails}"/>
            <ToolbarSpacer />
            <Button text="{i18n>cancel}" id="btnCancel" press="onTerminationEditCancel" type="Ghost" visible="{= ${terminationModel>/activeTerminationEditMode}}"/>
            <Button icon="sap-icon://save" text="{i18n>save}" id="btnSave" type="Emphasized" press="onTerminationUpdate" visible="{= ${terminationModel>/activeTerminationEditMode}}"/>
@@ -112,7 +112,15 @@
                   <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{terminationModel>/activeTermination/terminationReceiptDate}" />
                </VBox>
                <VBox height="50px" class="sapUiSmallMarginEnd">
-                  <Label text="{i18n>terminationEffectDate}" required="true"/>
+                  <HBox>
+                     <Label text="{i18n>terminationEffectDate}" required="true"/>
+                     <core:Icon
+                        class="sapUiSmallMarginBegin"
+                        src="sap-icon://information"
+                        color="#0070f2"
+                        visible="{parts: [{path: 'terminationModel>/activeTermination/businessScenario'}, {path: 'terminationModel>/activeTermination/status'}, {path: 'terminationModel>/oppEUDataAct'}], formatter: '.formatter.showTEDInfo'}"
+                        tooltip="{i18n>CUSTOMERPARTNERTEDINFO}" />
+                  </HBox>
                   <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationEffectiveDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" enabled="{parts: [{path: 'terminationModel>/activeTermination/businessScenario'}, {path: 'terminationModel>/activeTermination/status'}, {path: 'terminationModel>/oppEUDataAct'}], formatter: '.formatter.isTEDEnabled'}"/>
                   <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{terminationModel>/activeTermination/terminationEffectiveDate}" />
                </VBox>

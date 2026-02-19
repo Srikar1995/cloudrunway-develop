@@ -423,6 +423,7 @@ sap.ui.define(
         
         oTerminationModel.setProperty("/activeTerminationEditMode", false);
         oODataModel.resetChanges("TerminationUpdateGroup");
+        this._clearMessages();
       },
       onTerminationUpdate: async function (oEvent) {
         const that = this;
@@ -435,30 +436,69 @@ sap.ui.define(
         const oOriginalTermination = oTerminationModel.getProperty("/originalActiveTermination");
         const oOriginalStatus = oOriginalTermination ? oOriginalTermination.status : null;
         const oOriginalEffectiveDate = oOriginalTermination ? oOriginalTermination.terminationEffectiveDate : null;
-        const aMergedAttachments = oTerminationModel.getProperty("/mergedAttachmentsList") || [];
-        const bHasAttachments = aMergedAttachments.length > 0;
+        const aPendingAttachments = oTerminationModel.getProperty("/pendingAttachments") || [];
+        const bHaNewsAttachments = aPendingAttachments.length > 0;
 
+        // Termination receipt date cannot be in future
+        if (updatedData.terminationReceiptDate) {
+          const oTRDValidation = Common.validateTRDNotFuture(updatedData.terminationReceiptDate);
+          if (!oTRDValidation.isValid) {
+            oTerminationModel.setProperty("/taUpdateMessages", [
+              { message: oTRDValidation.errorMessage, type: "Error" }
+            ]);
+            return;
+          }
+        }
+
+        // Termination Effective Date must be within contract start and end dates
+        const sContractStartDate = oTerminationModel.getProperty("/contractStartDate");
+        const sContractEndDate = oTerminationModel.getProperty("/contractEndDate");
+        if (updatedData.terminationEffectiveDate && sContractStartDate && sContractEndDate) {
+          const oTEDRangeValidation = Common.validateTEDWithinContractRange(
+            updatedData.terminationEffectiveDate,
+            sContractStartDate,
+            sContractEndDate
+          );
+          if (!oTEDRangeValidation.isValid) {
+            oTerminationModel.setProperty("/taUpdateMessages", [
+              { message: oTEDRangeValidation.errorMessage, type: "Error" }
+            ]);
+            return;
+          }
+        }
+        
+        const bNonPdfPending = aPendingAttachments.some(
+          function (oPending) {
+            return oPending.file && oPending.file.type !== "application/pdf";
+          }
+        );
+        if (bNonPdfPending) {
+          oTerminationModel.setProperty("/taUpdateMessages", [
+            { message: Common.getLocalTextByi18nValue("ATTACHMENTTYPEERROR"), type: "Error" }
+          ]);
+          return;
+        }
         // Check if status changed to Retracted
         const bStatusChangedToRetracted = 
           updatedData.status === "Retracted" && 
           oOriginalStatus !== "Retracted" && 
-          !bHasAttachments;
+          !bHaNewsAttachments;
 
         // Check if effective date changed
         const bEffectiveDateChanged = 
           updatedData.terminationEffectiveDate !== oOriginalEffectiveDate && 
-          !bHasAttachments;
+          !bHaNewsAttachments;
 
         if (bStatusChangedToRetracted) {
           oTerminationModel.setProperty("/taUpdateMessages", [
-            { message: Common.getLocalTextByi18nValue("MISSINGRETRACTIONATTACHMENT"), type: "Error" }
+            { message: Common.getLocalTextByi18nValue("ATTACHMENTERROR"), type: "Error" }
           ]);
           return;
         }
 
         if (bEffectiveDateChanged) {
           oTerminationModel.setProperty("/taUpdateMessages", [
-            { message: Common.getLocalTextByi18nValue("MISSINGSWITCHINGPERIODATTACHMENT"), type: "Error" }
+            { message: Common.getLocalTextByi18nValue("ATTACHMENTERROR"), type: "Error" }
           ]);
           return;
         }
@@ -485,7 +525,6 @@ sap.ui.define(
 
         try {
           // Step 1: Upload all pending attachments
-          const aPendingAttachments = oTerminationModel.getProperty("/pendingAttachments") || [];
           const aPendingToUpload = [...aPendingAttachments]; // Create a copy
           
           for (const oPendingAttachment of aPendingToUpload) {
@@ -1025,11 +1064,6 @@ sap.ui.define(
           const errText = await res.text();
           return Promise.reject(new Error(`Delete failed (${res.status}): ${errText}`));
         }
-      },
-
-      _clearMessages: function () {
-        const oTerminationModel = this.getView().getModel("terminationModel");
-        oTerminationModel.setProperty("/taUpdateMessages", []);
       },
       
       // ===== ValueHelpInput Event Handlers =====

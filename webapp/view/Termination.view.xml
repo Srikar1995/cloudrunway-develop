@@ -6,7 +6,7 @@
                   text="{= ${terminationModel>/taMessages/0/message}}"
                   type="{= ${terminationModel>/taMessages/0/type}}"
                   showIcon="true"
-                  showCloseButton="true">
+                  showCloseButton="false">
          </MessageStrip>
       </VBox>
       <VBox id="vboxTerminationHistory" class="sapUiSmallMargin">
@@ -19,9 +19,9 @@
                </OverflowToolbar>
             </headerToolbar>
             <columns>
-               <!-- <Column hAlign="Begin" vAlign="Middle" mergeDuplicates="false">
-                  <Text text="ID" />
-               </Column> -->
+               <Column hAlign="Begin" vAlign="Middle" mergeDuplicates="false">
+                  <Text text="{i18n>terminationID}" />
+               </Column>
                <Column hAlign="Begin" vAlign="Middle" mergeDuplicates="false">
                   <Text text="{i18n>status}" />
                </Column>
@@ -46,7 +46,7 @@
             </columns>
             <items>
                <ColumnListItem type="Active" press="onTerminationSelect" selected="{= ${terminationModel>ID} === ${terminationModel>/activeTermination/ID}}">
-                  <!-- <Text text="{terminationModel>ID}" /> -->
+                  <Text text="{terminationModel>displayId}" />
                   <VBox width="100%">
                   <ObjectStatus class="customFullWidthStatus" text="{parts: [{path: 'terminationModel>/TerminationStatusList'}, {path: 'terminationModel>status'}], formatter:'.formatter.getValueDescr'}" inverted="true" state="{parts: [{path: 'terminationModel>status'}], formatter: '.formatter.getTAStatusState'}" />
                   </VBox>
@@ -65,7 +65,7 @@
                   text="{= ${terminationModel>/taUpdateMessages/0/message}}"
                   type="{= ${terminationModel>/taUpdateMessages/0/type}}"
                   showIcon="true"
-                  showCloseButton="true">
+                  showCloseButton="false">
          </MessageStrip>
       </VBox>
       <VBox id="vboxTerminationDetailsMain" class="sapUiSmallMargin sapUiSmallMarginTop" visible="{= !!${terminationModel>/activeTermination/ID}}">
@@ -76,7 +76,7 @@
       <VBox id="vboxTerminationAttachmentsMain" class="sapUiSmallMargin sapUiSmallMarginTop" visible="{= !!${terminationModel>/activeTermination/ID}}">
          <Panel class="sapUiNoContentPadding">
             <OverflowToolbar design="Solid" class="sapMListHdr sapMTBHeader-CTX">
-               <Title text="{i18n>displayAttachments}" level="H2" />
+               <Title text="{terminationModel>/activeTermination/displayId} - {i18n>displayAttachments}" level="H2" />
                <ToolbarSpacer />
                <Button id="uploadButton" text="Upload" press="onUpload" type="Ghost" visible="{= ${terminationModel>/activeTerminationEditMode}}"/>
             </OverflowToolbar>

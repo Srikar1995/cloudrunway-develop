@@ -97,6 +97,9 @@ sap.ui.define([
 			}
 			return sKey;
 		},
+		showTEDInfo: function (sBusinessScenario, sStatus, sEUDataActCoverage) {
+			return !this.formatter.isTEDEnabled(sBusinessScenario, sStatus, sEUDataActCoverage);
+		},
 		/**
 		 * Determines if Termination Effective Date (TED) field should be enabled
 		 * @param {string} sBusinessScenario - Business scenario key (e.g., "Z01", "Z07")
