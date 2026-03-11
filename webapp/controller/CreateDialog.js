@@ -8,6 +8,7 @@ sap.ui.define(
       openCreateTermination: function () {
         const oView = this.getView();
         const oTerminationModel = oView.getModel("terminationModel");
+        const sBusinessScenario = oTerminationModel.getProperty("/oppBusinessScenario");
         oTerminationModel.setProperty("/taMessages", []);
         const oPrevalidationData = oTerminationModel.getProperty("/preValidationData");
         if (!oPrevalidationData.canCreateTermination) {
@@ -27,13 +28,13 @@ sap.ui.define(
             oView.addDependent(this._pDialog);
           }
           const oCreateModel = new JSONModel({
-            businessScenario: oTerminationModel.getProperty("/oppBusinessScenario"),
+            businessScenario: sBusinessScenario,
             terminationOrigin: "",
             riskReason: oTerminationModel.getProperty("/oppRenewalRiskReason"),
             requestor: {},
             responsible: {},
             receiptDate: "",
-            effectData: "",
+            effectDate: sBusinessScenario === Common.businessScenarioCustomerInitiated ? oTerminationModel.getProperty("/contractEndDate") : "",
             AttachmentsList: [],
             taCreateMessages: [],
             loading: false
@@ -94,7 +95,7 @@ sap.ui.define(
         const sTerminationReceiptDate =
           oCreateModel.getProperty("/receiptDate");
         const sTerminationEffectiveDate =
-          oCreateModel.getProperty("/effectData");
+          oCreateModel.getProperty("/effectDate");
 
         if (!sTerminationOrigin || !sTerminationRequester || !sTerminationResponsible || !sTerminationReceiptDate || !sTerminationEffectiveDate) {
           oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("MANDATORYERROR"), type: "Error" }]);

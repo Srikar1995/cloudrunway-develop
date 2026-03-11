@@ -9,8 +9,8 @@ sap.ui.define([
         getIconSrc: function(mediaType, fileName) {
 			return UploadSetwithTable.getIconForFileType(mediaType, fileName);
 		},
-		// enableCreateTA: function (terminationOrigin, requestor, responsible, receiptDate, effectData, attachmentsList) {
-		// 	if ( terminationOrigin && requestor && responsible && receiptDate && effectData && attachmentsList?.length ) {
+		// enableCreateTA: function (terminationOrigin, requestor, responsible, receiptDate, effectDate, attachmentsList) {
+		// 	if ( terminationOrigin && requestor && responsible && receiptDate && effectDate && attachmentsList?.length ) {
 		// 		return true;
 		// 	}
 		// 	return false;
@@ -107,24 +107,11 @@ sap.ui.define([
 		 * @param {string} sEUDataActCoverage - EU Data Act Coverage (e.g., "FC")
 		 * @returns {boolean} - True if TED should be enabled, false otherwise
 		 */
-		isTEDEnabled: function (sBusinessScenario, sStatus, sEUDataActCoverage) {
-			// If status is not "InProcess", TED is not editable
-			if (sStatus !== Common?.statusInProcess) {
-				return false;
-			}
-
-			// Customer/Partner Initiated Full Termination (Z01): TED is NOT editable
-			if (sBusinessScenario === Common?.businessScenarioCustomerInitiatedBkey) {
-				return false;
-			}
-
-			// EU Data Act (Z07): TED is editable ONLY if coverage is "FC" (Fully Covered)
-			if (sBusinessScenario === Common?.businessScenarioEUDataAct) {
-				return sEUDataActCoverage === Common?.euDataActCoverageFullyCovered;
-			}
-
-			// SAP Initiated Termination: TED is editable if status is "InProcess"
-			return true;
+		isTEDEnabled: function (sBusinessScenario, sEUDataActCoverage) {
+			return sBusinessScenario !== Common?.businessScenarioCustomerInitiatedBkey || sEUDataActCoverage === Common.euDataActCoverageFullyCovered;
+		},
+		getEffectiveDateEnable: function (sEUDATA, sBusinessScenario) {
+			return sBusinessScenario !== Common.businessScenarioCustomerInitiated || sEUDATA === Common.euDataActCoverageFullyCovered;
 		},
     };
 });

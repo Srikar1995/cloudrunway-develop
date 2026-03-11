@@ -88,7 +88,7 @@
                      </VBox>
                      <VBox height="50px" class="sapUiSmallMarginEnd">
                         <Label id="lblTerminationEffectiveDate" text="{i18n>terminationEffectDate}" required="true"/>
-                        <DatePicker id="dpTerminationEffectiveDate" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Date" value="{createModel>/effectData}"/>
+                        <DatePicker id="dpTerminationEffectiveDate" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" placeholder="Select Date" value="{createModel>/effectDate}" enabled="{parts: [{path: 'terminationModel>/oppEUDataAct'}, {path: 'createModel>/businessScenario'}], formatter:'.formatter.getEffectiveDateEnable'}"/>
                      </VBox>
                   </layout:content>
                </layout:Grid>

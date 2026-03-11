@@ -1,7 +1,7 @@
 sap.ui.define([
   "cloudrunway/model/Constants",
-  "cloudrunway/model/Formatter"
-], function (Constants, Formatter) {
+  "sap/ui/core/format/DateFormat"
+], function (Constants, DateFormat) {
   "use strict";
 
   return {
@@ -64,8 +64,9 @@ sap.ui.define([
       const oEnd = new Date(sContractEndDate);
       oEnd.setHours(0, 0, 0, 0);
       if (oTED < oStart || oTED > oEnd) {
-        const sFormattedStart = Formatter.formatDate(sContractStartDate, "dd.MMM.yy");
-        const sFormattedEnd = Formatter.formatDate(sContractEndDate, "dd.MMM.yy");
+        const oDateFormatter = DateFormat.getDateInstance({ pattern: "dd.MMM.yy", UTC: true });
+        const sFormattedStart = oDateFormatter.format(new Date(sContractStartDate));
+        const sFormattedEnd = oDateFormatter.format(new Date(sContractEndDate));
         const sMessage = this.getLocalTextByi18nValue("TEDRANGEERROR", [sFormattedStart, sFormattedEnd]);
         return { isValid: false, errorMessage: sMessage };
       }

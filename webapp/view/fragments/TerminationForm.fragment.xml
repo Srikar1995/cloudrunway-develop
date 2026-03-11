@@ -121,7 +121,7 @@
                         visible="{parts: [{path: 'terminationModel>/activeTermination/businessScenario'}, {path: 'terminationModel>/activeTermination/status'}, {path: 'terminationModel>/oppEUDataAct'}], formatter: '.formatter.showTEDInfo'}"
                         tooltip="{i18n>CUSTOMERPARTNERTEDINFO}" />
                   </HBox>
-                  <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationEffectiveDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" enabled="{parts: [{path: 'terminationModel>/activeTermination/businessScenario'}, {path: 'terminationModel>/activeTermination/status'}, {path: 'terminationModel>/oppEUDataAct'}], formatter: '.formatter.isTEDEnabled'}"/>
+                  <DatePicker visible="{= ${terminationModel>/activeTerminationEditMode}}" value="{terminationModel>/activeTermination/terminationEffectiveDate}" displayFormat="MMM dd, yyyy" valueFormat="yyyy-MM-dd" enabled="{parts: [{path: 'terminationModel>/activeTermination/businessScenario'}, {path: 'terminationModel>/oppEUDataAct'}], formatter: '.formatter.isTEDEnabled'}"/>
                   <Text visible="{= !${terminationModel>/activeTerminationEditMode}}" text="{terminationModel>/activeTermination/terminationEffectiveDate}" />
                </VBox>
                <VBox class="sapUiSmallMarginEnd" height="50px" visible="{= ${terminationModel>/activeTermination/status} === 'Retracted' ? true : false}">
