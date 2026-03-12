@@ -37,7 +37,8 @@ sap.ui.define(
             effectDate: sBusinessScenario === Common.businessScenarioCustomerInitiated ? oTerminationModel.getProperty("/contractEndDate") : "",
             AttachmentsList: [],
             taCreateMessages: [],
-            loading: false
+            loading: false,
+            fieldErrors: {}
           });
           this._pDialog.setModel(oCreateModel, "createModel");
           this._pDialog.open();
@@ -79,56 +80,56 @@ sap.ui.define(
         const oView = this.getView();
         const oTerminationModel = oView.getModel("terminationModel");
         const oCreateModel = this._pDialog.getModel("createModel");
-        let nonPdfExists = false;
         this.CreateDialog._clearMessages.call(this);
-        const aFiles = oCreateModel.getProperty("/AttachmentsList")
-        const sBusinessScenario = oCreateModel.getProperty("/businessScenario");
-        const sBusinessScenarioPkey = Formatter.getBackendKey(oTerminationModel.getProperty("/BusinessScenarioList"), sBusinessScenario);
-        const sOrigin = oTerminationModel.getProperty("/oppOrigin");
-        const sRenewalType = sOrigin === "ZC3" ? "Auto" : "Active";
-        const sTerminationOrigin =
-          oCreateModel.getProperty("/terminationOrigin");
-        const sRenewalRiskReason = oCreateModel.getProperty("/riskReason");
+        oCreateModel.setProperty("/fieldErrors", {});
+
+        const sTerminationOrigin = oCreateModel.getProperty("/terminationOrigin");
         const sTerminationRequester = oCreateModel.getProperty("/requestor");
-        const sTerminationResponsible =
-          oCreateModel.getProperty("/responsible");
-        const sTerminationReceiptDate =
-          oCreateModel.getProperty("/receiptDate");
-        const sTerminationEffectiveDate =
-          oCreateModel.getProperty("/effectDate");
+        const sTerminationResponsible = oCreateModel.getProperty("/responsible");
+        const sTerminationReceiptDate = oCreateModel.getProperty("/receiptDate");
+        const sTerminationEffectiveDate = oCreateModel.getProperty("/effectDate");
+        const oDataForCreate = {
+          terminationOrigin: sTerminationOrigin,
+          requestor: sTerminationRequester,
+          responsible: sTerminationResponsible,
+          receiptDate: sTerminationReceiptDate,
+          effectDate: sTerminationEffectiveDate
+        };
 
-        if (!sTerminationOrigin || !sTerminationRequester || !sTerminationResponsible || !sTerminationReceiptDate || !sTerminationEffectiveDate) {
-          oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("MANDATORYERROR"), type: "Error" }]);
-          return;
-        }
-
-        // Termination receipt date cannot be in future
+        const oFieldErrors = Common.validateMandatoryFields(oDataForCreate);
         const oTRDValidation = Common.validateTRDNotFuture(sTerminationReceiptDate);
         if (!oTRDValidation.isValid) {
-          oCreateModel.setProperty("/taCreateMessages", [{ message: oTRDValidation.errorMessage, type: "Error" }]);
-          return;
+          oFieldErrors.terminationReceiptDate = { valueState: "Error", valueStateText: oTRDValidation.errorMessage };
         }
-
-        // Termination Effective Date must be within contract start and end dates
         const sContractStartDate = oTerminationModel.getProperty("/contractStartDate");
         const sContractEndDate = oTerminationModel.getProperty("/contractEndDate");
         const oTEDRangeValidation = Common.validateTEDWithinContractRange(sTerminationEffectiveDate, sContractStartDate, sContractEndDate);
         if (!oTEDRangeValidation.isValid) {
-          oCreateModel.setProperty("/taCreateMessages", [{ message: oTEDRangeValidation.errorMessage, type: "Error" }]);
+          oFieldErrors.terminationEffectiveDate = { valueState: "Error", valueStateText: oTEDRangeValidation.errorMessage };
+        }
+
+        oCreateModel.setProperty("/fieldErrors", oFieldErrors);
+        if (Object.keys(oFieldErrors).length > 0) {
+          oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("MANDATORYERROR"), type: "Error" }]);
           return;
         }
 
-        if (!aFiles?.length) {
+        const aFiles = oCreateModel.getProperty("/AttachmentsList") || [];
+        if (!aFiles.length) {
           oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("ATTACHMENTERROR"), type: "Error" }]);
           return;
         }
-
-        nonPdfExists = aFiles.some(element => element.type !== "application/pdf");
+        const nonPdfExists = aFiles.some(function (el) { return el.type !== "application/pdf"; });
         if (nonPdfExists) {
           oCreateModel.setProperty("/taCreateMessages", [{ message: Common.getLocalTextByi18nValue("ATTACHMENTTYPEERROR"), type: "Error" }]);
           return;
         }
 
+        const sBusinessScenario = oCreateModel.getProperty("/businessScenario");
+        const sBusinessScenarioPkey = Formatter.getBackendKey(oTerminationModel.getProperty("/BusinessScenarioList"), sBusinessScenario);
+        const sOrigin = oTerminationModel.getProperty("/oppOrigin");
+        const sRenewalType = sOrigin === "ZC3" ? "Auto" : "Active";
+        const sRenewalRiskReason = oCreateModel.getProperty("/riskReason");
         const oPayload = {
           displayId: "UI5-" + Date.now(),
           source: "BTP-Termination-App",
@@ -158,7 +159,7 @@ sap.ui.define(
           return;
         }
 
-        oCreateModel.setProperty("/loading", false);
+        oCreateModel.setProperty("/loading", true);
         const oListBinding = oODataModel.bindList("/TerminationRequests",
           null,
           null,
@@ -168,8 +169,23 @@ sap.ui.define(
           });
         oListBinding.attachCreateCompleted((oEvent) => {
           if (!oEvent.getParameter("success")) {
-            const oMessages = oODataModel.getMessagesByPath("");
-            const oMessage = oMessages[oMessages?.length - 1];
+            let oMessage = null;
+            const mMessages = oODataModel.mMessages;
+            if (mMessages && typeof mMessages === "object") {
+              const aAll = [];
+              for (const sPath in mMessages) {
+                const aPathMessages = mMessages[sPath];
+                if (Array.isArray(aPathMessages)) {
+                  aAll.push.apply(aAll, aPathMessages);
+                }
+              }
+              const aErrors = aAll.filter(function (m) { return m && m.type === "Error"; });
+              oMessage = (aErrors.length > 0 ? aErrors[aErrors.length - 1] : aAll[aAll.length - 1]) || null;
+            }
+            if (!oMessage) {
+              const oMessages = oODataModel.getMessagesByPath("");
+              oMessage = oMessages && oMessages[oMessages.length - 1];
+            }
             if (oMessage) {
               oCreateModel.setProperty("/taCreateMessages", [{ message: oMessage.message, type: oMessage.type }]);
             }
@@ -195,9 +211,12 @@ sap.ui.define(
                 sap.m.MessageBox.error(
                   err.message || "Error uploading attachments."
                 );
+              } finally {
+                that._pDialog.getModel("createModel").setProperty("/loading", false);
               }
             })
           .catch(function (oError) {
+            that._pDialog.getModel("createModel").setProperty("/loading", false);
             sap.m.MessageBox.error(
               oError.message || "Error submitting termination."
             );
@@ -293,6 +312,7 @@ sap.ui.define(
       },
       onCloseTerminationDialog: function () {
         const oTerminationModel = this.getView().getModel("terminationModel");
+        this._pDialog.getModel("createModel").setProperty("/fieldErrors", {});
         this._pDialog.close();
         oTerminationModel.setProperty("/createOpen", false);
       },
@@ -301,6 +321,18 @@ sap.ui.define(
         const oODataModelV4 = this.getView().getModel("terminationModelV4");
         oCreateModel.setProperty("/taCreateMessages", []);
         oODataModelV4.setMessages([]);
+      },
+      onTerminationOriginChange: function () {
+        const oCreateModel = this._pDialog.getModel("createModel");
+        oCreateModel.setProperty("/fieldErrors/terminationOrigin", { valueState: "None", valueStateText: "" });
+      },
+      onTRDChange: function () {
+        const oCreateModel = this._pDialog.getModel("createModel");
+        oCreateModel.setProperty("/fieldErrors/terminationReceiptDate", { valueState: "None", valueStateText: "" });
+      },
+      onTEDChange: function () {
+        const oCreateModel = this._pDialog.getModel("createModel");
+        oCreateModel.setProperty("/fieldErrors/terminationEffectiveDate", { valueState: "None", valueStateText: "" });
       },
     };
   }

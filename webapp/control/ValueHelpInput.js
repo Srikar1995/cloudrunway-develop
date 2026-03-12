@@ -476,6 +476,22 @@ sap.ui.define(
         return this;
       },
 
+      setValueState: function (sValueState) {
+        this.setProperty("valueState", sValueState, true);
+        if (this._oInput) {
+          this._oInput.setValueState(sValueState || "None");
+        }
+        return this;
+      },
+
+      setValueStateText: function (sValueStateText) {
+        this.setProperty("valueStateText", sValueStateText, true);
+        if (this._oInput) {
+          this._oInput.setValueStateText(sValueStateText || "");
+        }
+        return this;
+      },
+
       /**
        * Renderer function
        * @param {sap.ui.core.RenderManager} oRM - Render manager

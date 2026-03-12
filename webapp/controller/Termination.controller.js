@@ -48,6 +48,7 @@ sap.ui.define(
 
       _preValidate: function () {
         const oView = this.getView();
+        oView.setBusy(true);
         const oODataModel = oView.getModel("terminationModelV4");
         const oTerminationModel = oView.getModel("terminationModel");
         const sOpportunityId = oTerminationModel.getProperty("/OpportunityID");
@@ -68,6 +69,7 @@ sap.ui.define(
             this._readTerminations();
           })
           .catch((oError) => {
+            oView.setBusy(false);
             oTerminationModel.setProperty("/taMessages", [
               {
                 message: oError.message,
@@ -110,7 +112,8 @@ sap.ui.define(
           deletedAttachmentIds: [],
           originalAttachmentsList: [],
           mergedAttachmentsList: [],
-          originalActiveTermination: null
+          originalActiveTermination: null,
+          fieldErrors: {}
         });
         oView.setModel(oTerminationModel, "terminationModel");
       },
@@ -173,7 +176,7 @@ sap.ui.define(
               oTerminationModel.setProperty("/oppBusinessScenario", oData.extensions?.Z_BusinessScenario);
               oTerminationModel.setProperty("/oppAccountID", oData.account?.id);
               oTerminationModel.setProperty("/contractStartDate", oData.extensions?.Z_QuoteContractStartDate);
-              oTerminationModel.setProperty("/contractEndDate", oData.extensions?.Z_QuoteContractEndDate);
+              oTerminationModel.setProperty("/contractEndDate", oTerminationModel.getProperty("/preValidationData/opportunityData/contractEndDate"));
               oTerminationModel.setProperty("/oppOrigin", oData.source);
               oTerminationModel.setProperty("/oppEUDataAct", oData.Z_EuData);
 
@@ -236,6 +239,7 @@ sap.ui.define(
         const oTerminationModel = oView.getModel("terminationModel");
         const sOppId = oTerminationModel.getProperty("/OpportunityID");
         if (!oODataModel) {
+          that.getView().setBusy(false);
           sap.m.MessageBox.error("OData V4 model not found.");
           return;
         }
@@ -323,14 +327,16 @@ sap.ui.define(
                 oTerminationModel.setProperty("/activeTermination", oActiveTermination);
                 that._readAttachments(aResults[0]);
               }
-              oTerminationModel.setProperty(
-                "/activeTerminationEditMode",
-                false
-              );
+                oTerminationModel.setProperty(
+                  "/activeTerminationEditMode",
+                  false
+                );
+                that.getView().setBusy(false);
             }.bind(this)
           )
           .catch(function (oError) {
             console.error("No Terminations found");
+            that.getView().setBusy(false);
           });
       },
       onTerminationSelect: async function (oEvent) {
@@ -400,7 +406,8 @@ sap.ui.define(
       onTerminationEditCancel: function (oEvent) {
         const oTerminationModel = this.getView().getModel("terminationModel");
         const oODataModel = this.getView().getModel("terminationModelV4");
-        
+        oTerminationModel.setProperty("/fieldErrors", {});
+
         // Restore original termination data
         const oOriginalTermination = oTerminationModel.getProperty("/originalActiveTermination");
         if (oOriginalTermination) {
@@ -439,34 +446,6 @@ sap.ui.define(
         const aPendingAttachments = oTerminationModel.getProperty("/pendingAttachments") || [];
         const bHaNewsAttachments = aPendingAttachments.length > 0;
 
-        // Termination receipt date cannot be in future
-        if (updatedData.terminationReceiptDate) {
-          const oTRDValidation = Common.validateTRDNotFuture(updatedData.terminationReceiptDate);
-          if (!oTRDValidation.isValid) {
-            oTerminationModel.setProperty("/taUpdateMessages", [
-              { message: oTRDValidation.errorMessage, type: "Error" }
-            ]);
-            return;
-          }
-        }
-
-        // Termination Effective Date must be within contract start and end dates
-        const sContractStartDate = oTerminationModel.getProperty("/contractStartDate");
-        const sContractEndDate = oTerminationModel.getProperty("/contractEndDate");
-        if (updatedData.terminationEffectiveDate && sContractStartDate && sContractEndDate) {
-          const oTEDRangeValidation = Common.validateTEDWithinContractRange(
-            updatedData.terminationEffectiveDate,
-            sContractStartDate,
-            sContractEndDate
-          );
-          if (!oTEDRangeValidation.isValid) {
-            oTerminationModel.setProperty("/taUpdateMessages", [
-              { message: oTEDRangeValidation.errorMessage, type: "Error" }
-            ]);
-            return;
-          }
-        }
-        
         const bNonPdfPending = aPendingAttachments.some(
           function (oPending) {
             return oPending.file && oPending.file.type !== "application/pdf";
@@ -503,26 +482,35 @@ sap.ui.define(
           return;
         }
 
-        const isMandatoryFieldsEmpty =
-          !updatedData.status ||
-          !updatedData.terminationOrigin ||
-          !updatedData.terminationRequester ||
-          !updatedData.terminationResponsible ||
-          !updatedData.terminationReceiptDate ||
-          !updatedData.terminationEffectiveDate;
-
-        const isRetractedFieldsEmpty =
-          updatedData.status === "Retracted" &&
-          (!updatedData.retractionReason ||
-            !updatedData.retractionReceivedDate);
-
-        if (isMandatoryFieldsEmpty || isRetractedFieldsEmpty) {
+        oTerminationModel.setProperty("/fieldErrors", {});
+        const oFieldErrors = Common.validateMandatoryFields(updatedData, { isRetracted: updatedData.status === "Retracted" });
+        if (updatedData.terminationReceiptDate) {
+          const oTRDValidation = Common.validateTRDNotFuture(updatedData.terminationReceiptDate);
+          if (!oTRDValidation.isValid) {
+            oFieldErrors.terminationReceiptDate = { valueState: "Error", valueStateText: oTRDValidation.errorMessage };
+          }
+        }
+        const sContractStartDate = oTerminationModel.getProperty("/contractStartDate");
+        const sContractEndDate = oTerminationModel.getProperty("/contractEndDate");
+        if (updatedData.terminationEffectiveDate && sContractStartDate && sContractEndDate) {
+          const oTEDRangeValidation = Common.validateTEDWithinContractRange(
+            updatedData.terminationEffectiveDate,
+            sContractStartDate,
+            sContractEndDate
+          );
+          if (!oTEDRangeValidation.isValid) {
+            oFieldErrors.terminationEffectiveDate = { valueState: "Error", valueStateText: oTEDRangeValidation.errorMessage };
+          }
+        }
+        oTerminationModel.setProperty("/fieldErrors", oFieldErrors);
+        if (Object.keys(oFieldErrors).length > 0) {
           oTerminationModel.setProperty("/taUpdateMessages", [
-            { message: "Please enter all mandatory fields", type: "Error" },
+            { message: "Please enter all mandatory fields", type: "Error" }
           ]);
           return;
         }
 
+        this.getView().setBusy(true);
         try {
           // Step 1: Upload all pending attachments
           const aPendingToUpload = [...aPendingAttachments]; // Create a copy
@@ -622,6 +610,8 @@ sap.ui.define(
         } catch (oError) {
           console.error("Error updating termination:", oError);
           sap.m.MessageBox.error(oError.message || "Update failed");
+        } finally {
+          this.getView().setBusy(false);
         }
       },
       _uploadAttachment: function (oFile, sTerminationId) {
@@ -1077,15 +1067,21 @@ sap.ui.define(
         if (oTerminationModel.getProperty("/createOpen")) {
           const oCreateModel = this._pDialog.getModel("createModel");
           oCreateModel.setProperty("/requestor", oSelectedItem);
+          oCreateModel.setProperty("/fieldErrors/terminationRequester", { valueState: "None", valueStateText: "" });
         } else {
-          // Edit mode - store object for later ID extraction
           const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
           oActiveTermination.requesterObject = oSelectedItem;
           oTerminationModel.setProperty("/activeTermination", oActiveTermination);
+          oTerminationModel.setProperty("/fieldErrors/terminationRequester", { valueState: "None", valueStateText: "" });
         }
       },
       onRequesterChange: function (oEvent) {
-        // Handle change event if needed
+        const oTerminationModel = this.getView().getModel("terminationModel");
+        if (oTerminationModel.getProperty("/createOpen")) {
+          this._pDialog.getModel("createModel").setProperty("/fieldErrors/terminationRequester", { valueState: "None", valueStateText: "" });
+        } else {
+          oTerminationModel.setProperty("/fieldErrors/terminationRequester", { valueState: "None", valueStateText: "" });
+        }
       },
       onResponsibleSelected: function (oEvent) {
         const oSelectedItem = oEvent.getParameter("selectedItem");
@@ -1097,15 +1093,42 @@ sap.ui.define(
         if (oTerminationModel.getProperty("/createOpen")) {
           const oCreateModel = this._pDialog.getModel("createModel");
           oCreateModel.setProperty("/responsible", oSelectedItem);
+          oCreateModel.setProperty("/fieldErrors/terminationResponsible", { valueState: "None", valueStateText: "" });
         } else {
-          // Edit mode - store object for later ID extraction
           const oActiveTermination = oTerminationModel.getProperty("/activeTermination");
           oActiveTermination.responsibleObject = oSelectedItem;
           oTerminationModel.setProperty("/activeTermination", oActiveTermination);
+          oTerminationModel.setProperty("/fieldErrors/terminationResponsible", { valueState: "None", valueStateText: "" });
         }
       },
       onResponsibleChange: function (oEvent) {
-        // Handle change event if needed
+        const oTerminationModel = this.getView().getModel("terminationModel");
+        if (oTerminationModel.getProperty("/createOpen")) {
+          this._pDialog.getModel("createModel").setProperty("/fieldErrors/terminationResponsible", { valueState: "None", valueStateText: "" });
+        } else {
+          oTerminationModel.setProperty("/fieldErrors/terminationResponsible", { valueState: "None", valueStateText: "" });
+        }
+      },
+      onStatusChange: function () {
+        this.getView().getModel("terminationModel").setProperty("/fieldErrors/status", { valueState: "None", valueStateText: "" });
+      },
+      onTerminationOriginChange: function () {
+        const oTerminationModel = this.getView().getModel("terminationModel");
+        if (!oTerminationModel.getProperty("/createOpen")) {
+          oTerminationModel.setProperty("/fieldErrors/terminationOrigin", { valueState: "None", valueStateText: "" });
+        }
+      },
+      onTRDChange: function () {
+        this.getView().getModel("terminationModel").setProperty("/fieldErrors/terminationReceiptDate", { valueState: "None", valueStateText: "" });
+      },
+      onTEDChange: function () {
+        this.getView().getModel("terminationModel").setProperty("/fieldErrors/terminationEffectiveDate", { valueState: "None", valueStateText: "" });
+      },
+      onRetractionReasonChange: function () {
+        this.getView().getModel("terminationModel").setProperty("/fieldErrors/retractionReason", { valueState: "None", valueStateText: "" });
+      },
+      onRetractionDateChange: function () {
+        this.getView().getModel("terminationModel").setProperty("/fieldErrors/retractionReceivedDate", { valueState: "None", valueStateText: "" });
       },
     });
   }
