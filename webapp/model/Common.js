@@ -142,10 +142,16 @@ sap.ui.define([
       }
       if (bIsRetracted) {
         if (!oData.retractionReason || (typeof oData.retractionReason === "string" && oData.retractionReason.trim() === "")) {
-          setError("retractionReason");
+          oFieldErrors.retractionReason = {
+            valueState: "Error",
+            valueStateText: this.getLocalTextByi18nValue("RETRACTIONREASONMISSING")
+          };
         }
         if (!oData.retractionReceivedDate || (typeof oData.retractionReceivedDate === "string" && oData.retractionReceivedDate.trim() === "")) {
-          setError("retractionReceivedDate");
+          oFieldErrors.retractionReceivedDate = {
+            valueState: "Error",
+            valueStateText: this.getLocalTextByi18nValue("RETRACTIONRECEIPTDATE_MISSING")
+          };
         }
       }
       return oFieldErrors;

@@ -470,14 +470,14 @@ sap.ui.define(
 
         if (bStatusChangedToRetracted) {
           oTerminationModel.setProperty("/taUpdateMessages", [
-            { message: Common.getLocalTextByi18nValue("ATTACHMENTERROR"), type: "Error" }
+            { message: Common.getLocalTextByi18nValue("MISSINGRETRACTIONATTACHMENT"), type: "Error" }
           ]);
           return;
         }
 
         if (bEffectiveDateChanged) {
           oTerminationModel.setProperty("/taUpdateMessages", [
-            { message: Common.getLocalTextByi18nValue("ATTACHMENTERROR"), type: "Error" }
+            { message: Common.getLocalTextByi18nValue("MISSINGSWITCHINGPERIODATTACHMENT"), type: "Error" }
           ]);
           return;
         }
